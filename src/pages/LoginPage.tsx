@@ -21,7 +21,7 @@ export function LoginPage() {
       <div className="mb-8 text-center space-y-2">
         <div className="flex items-center justify-center gap-2 mb-4">
           <Database className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Synapse to Fabric</h1>
+          <h1 className="text-3xl font-bold">Fabric Migration Tool</h1>
         </div>
         <p className="text-muted-foreground">
           Transform your data infrastructure with confidence

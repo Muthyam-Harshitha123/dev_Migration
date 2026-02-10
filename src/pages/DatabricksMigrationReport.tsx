@@ -30,8 +30,16 @@ import {
     Home,
     ChevronRight,
     AlertTriangle,
+    List,
+    Minus,
+    RefreshCw,
 } from "lucide-react";
 import type { Status } from "@/types/migration";
+import { DatabricksMigrationReportDialog } from "@/components/modals/DatabricksMigrationReportDialogue";
+import { useToast } from "@/hooks/use-toast";
+import { ReplaceNotebooksDialog } from "@/components/modals/ReplaceNotebookDialog";
+import { useFabricCredentials } from "@/contexts/FabricCredentialsContext";
+import { useDatabricksCredentials } from "@/contexts/DatabricksCredentialsContext";
 
 interface DatabricksMigrationItem {
     id: string;
@@ -39,6 +47,7 @@ interface DatabricksMigrationItem {
     type: "Job" | "Notebook" | "Cluster";
     status: Status;
     targetWorkspace?: string;
+    targetWorkspaceId?: string;
     errorMessage?: string;
     // Databricks-specific fields
     schedule?: string;
@@ -53,24 +62,43 @@ interface DatabricksMigrationReportProps {
     items: DatabricksMigrationItem[];
     onLogout: () => void;
     onBackToHome: () => void;
+    targetWorkspaceId: string;
 }
 
 export function DatabricksMigrationReport({
     items: initialItems,
     onLogout,
-    onBackToHome
+    onBackToHome,
+    targetWorkspaceId
 }: DatabricksMigrationReportProps) {
+    const { toast } = useToast();
+    const { credentials: fabricCredentials } = useFabricCredentials();
+    const { credentials: databricksCredentials } = useDatabricksCredentials();
+
     const [items, setItems] = useState<DatabricksMigrationItem[]>(initialItems);
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [typeFilter, setTypeFilter] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [showReportDialog, setShowReportDialog] = useState(false);
+    const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+    const [pausedNotebooks, setPausedNotebooks] = useState<DatabricksMigrationItem[]>([]);
 
     const databricksTypes = [
         { value: "Job", label: "Job" },
         { value: "Notebook", label: "Notebook" },
         { value: "Cluster", label: "Cluster" },
     ];
+
+    useEffect(() => {
+        const paused = items.filter(item => item.status === "Paused" && item.type === "Notebook");
+        setPausedNotebooks(paused);
+
+        // Auto-show dialog when paused notebooks appear
+        if (paused.length > 0 && !showReplaceDialog) {
+            setShowReplaceDialog(true);
+        }
+    }, [items]);
 
     useEffect(() => {
         setItems(initialItems);
@@ -81,11 +109,14 @@ export function DatabricksMigrationReport({
         success: items.filter(i => i.status === "Success").length,
         running: items.filter(i => i.status === "Running").length,
         failed: items.filter(i => i.status === "Failed").length,
+        skipped: items.filter(i => i.status === "Skipped").length,
+        replaced: items.filter(i => i.status === "Replaced").length,
     };
 
     const hasRunningItems = stats.running > 0;
-    const progress = stats.total > 0 ? ((stats.success + stats.failed) / stats.total) * 100 : 0;
-
+    const progress = stats.total > 0
+        ? ((stats.success + stats.failed + stats.replaced + stats.skipped) / stats.total) * 100
+        : 0;
     const filteredItems = items.filter(item => {
         const matchesStatus = statusFilter === "all" || item.status === statusFilter;
         const matchesType = typeFilter === "all" || item.type === typeFilter;
@@ -118,61 +149,145 @@ export function DatabricksMigrationReport({
 
     const allFilteredSelected = filteredItems.length > 0 && selectedItems.size === filteredItems.length;
 
-    const exportReportAsJson = () => {
-        const itemsToExport = selectedItems.size > 0
-            ? items.filter(item => selectedItems.has(item.id))
-            : items;
-
-        const report = {
-            metadata: {
-                exportDate: new Date().toISOString(),
-                exportedBy: "Migration Tool",
-                source: "Databricks",
-                target: "Microsoft Fabric",
-                version: "3.1.0",
-                itemsExported: itemsToExport.length,
-                selectedItemsOnly: selectedItems.size > 0
-            },
-            summary: {
-                totalItems: itemsToExport.length,
-                successful: itemsToExport.filter(i => i.status === "Success").length,
-                running: itemsToExport.filter(i => i.status === "Running").length,
-                failed: itemsToExport.filter(i => i.status === "Failed").length,
-                successRate: itemsToExport.length > 0
-                    ? ((itemsToExport.filter(i => i.status === "Success").length / itemsToExport.length) * 100).toFixed(2) + "%"
-                    : "0%"
-            },
-            items: itemsToExport.map(item => ({
-                id: item.id,
-                name: item.name,
-                type: item.type,
-                status: item.status,
-                targetWorkspace: item.targetWorkspace || "N/A",
-                errorMessage: item.errorMessage || null,
-                ...(item.schedule && { schedule: item.schedule }),
-                ...(item.cluster && { cluster: item.cluster }),
-                ...(item.language && { language: item.language }),
-                ...(item.path && { path: item.path }),
-                ...(item.runtime && { runtime: item.runtime }),
-                ...(item.workers && { workers: item.workers })
-            }))
-        };
-
-        const jsonString = JSON.stringify(report, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const selectionSuffix = selectedItems.size > 0 ? '-selected' : '';
-        link.download = `databricks-migration-report${selectionSuffix}-${timestamp}.json`;
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+    const openReportPreview = () => {
+        setShowReportDialog(true);
     };
+
+    const handleReplaceNotebooks = async (notebooksToReplace: any[]) => {
+        setShowReplaceDialog(false);
+
+        if (!fabricCredentials || !databricksCredentials) {
+            console.error("❌ Missing credentials:", { fabricCredentials, databricksCredentials });
+            toast({
+                title: "Missing Credentials",
+                description: "Fabric or Databricks credentials not found",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // ✅ FIX: Identify unselected notebooks and mark them as Skipped immediately
+        const allPausedNotebooks = pausedNotebooks;
+        const notebooksToSkip = allPausedNotebooks.filter(
+            nb => !notebooksToReplace.find(r => r.id === nb.id)
+        );
+
+        // Mark unselected notebooks as Skipped right away
+        notebooksToSkip.forEach(item => {
+            setItems(prev => prev.map(i =>
+                i.id === item.id ? { ...i, status: "Skipped" as Status } : i
+            ));
+        });
+
+        if (notebooksToReplace.length === 0) {
+            toast({
+                title: "No Notebooks Selected",
+                description: "Please select at least one notebook to replace",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        console.log("✅ Notebooks to replace:", notebooksToReplace);
+        console.log("⏭️ Notebooks to skip:", notebooksToSkip);
+        console.log("📋 Target Workspace ID:", targetWorkspaceId);
+
+        // Mark selected notebooks as Running
+        notebooksToReplace.forEach(item => {
+            setItems(prev => prev.map(i =>
+                i.id === item.id ? { ...i, status: "Running" as Status } : i
+            ));
+        });
+
+        // Rest of your existing code...
+        try {
+            const payload = {
+                tenantId: fabricCredentials.tenantId,
+                clientId: fabricCredentials.clientId,
+                clientSecret: fabricCredentials.clientSecret,
+                workspaceId: targetWorkspaceId,
+                databricksUrl: databricksCredentials.databricksUrl,
+                personalAccessToken: databricksCredentials.personalAccessToken,
+                replaceIfExists: true,
+                notebooks: notebooksToReplace.map(nb => ({
+                    name: nb.name,
+                    path: nb.path
+                }))
+            };
+
+            console.log("📤 REPLACE NOTEBOOKS PAYLOAD:", JSON.stringify(payload, null, 2));
+
+            const response = await fetch(
+                "https://databrickstofabric-fuhdb8a7dhbebrf5.eastus-01.azurewebsites.net/api/MigrateNotebooks?code=0KjRO6OQdRDSj6_ahlRgYhxO2dGy07eCqqegZMeuFJrzAzFuJcusuA==",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                }
+            );
+
+            console.log("📥 Response Status:", response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("❌ Response Error:", errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            const result = await response.json();
+            console.log("📥 REPLACE NOTEBOOKS RESPONSE:", JSON.stringify(result, null, 2));
+
+            // Update status based on result
+            notebooksToReplace.forEach(item => {
+                const detail = result.details.find((d: any) => d.name === item.name);
+                console.log(`🔄 Processing notebook "${item.name}":`, detail);
+
+                const newStatus = detail?.status === "replaced" ? "Replaced" : "Success";
+
+                setItems(prev => prev.map(i =>
+                    i.id === item.id ? { ...i, status: newStatus as Status, errorMessage: undefined } : i
+                ));
+            });
+
+            toast({
+                title: "Operation Complete",
+                description: `${notebooksToReplace.length} replaced, ${notebooksToSkip.length} skipped`,
+            });
+        } catch (error) {
+            console.error("❌ REPLACE ERROR:", error);
+
+            // Mark as Failed
+            notebooksToReplace.forEach(item => {
+                setItems(prev => prev.map(i =>
+                    i.id === item.id ? { ...i, status: "Failed" as Status, errorMessage: "Replacement failed" } : i
+                ));
+            });
+
+            toast({
+                title: "Replacement Failed",
+                description: error instanceof Error ? error.message : "Failed to replace notebooks",
+                variant: "destructive",
+            });
+        }
+    };
+
+
+    const handleSkipNotebooks = () => {
+        setShowReplaceDialog(false);
+        pausedNotebooks.forEach(item => {
+            setItems(prev => prev.map(i =>
+                i.id === item.id ? { ...i, status: "Skipped" as Status } : i
+            ));
+        });
+        toast({
+            title: "All Notebooks Skipped",
+            description: `${pausedNotebooks.length} notebook(s) skipped`,
+        });
+    }
+
+    const itemsToExport = selectedItems.size > 0
+        ? items.filter(item => selectedItems.has(item.id))
+        : items;
 
     return (
         <div className="min-h-screen bg-background">
@@ -196,7 +311,7 @@ export function DatabricksMigrationReport({
                     <div className="flex gap-3">
                         <Button
                             variant="outline"
-                            onClick={exportReportAsJson}
+                            onClick={openReportPreview}
                             disabled={hasRunningItems}
                             title={hasRunningItems ? "Wait for all items to complete before exporting" : "Export migration report"}
                         >
@@ -212,6 +327,13 @@ export function DatabricksMigrationReport({
 
                 <Card className="mb-6">
                     <CardContent className="py-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-medium text-foreground">Overall Migration Progress</h3>
+                            <span className="text-sm text-muted-foreground">
+                                {stats.success + stats.failed} of {stats.total} completed
+                            </span>
+                        </div>
+                        <Progress value={progress} className="h-3" />
                         <div className="flex gap-6 mt-4">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 rounded-full bg-success" />
@@ -219,9 +341,8 @@ export function DatabricksMigrationReport({
                                     Success: {stats.success}
                                 </span>
                             </div>
-
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-running animate-pulse" />
+                                <div className={`w-3 h-3 rounded-full bg-running ${stats.running > 0 ? 'animate-pulse' : ''}`} />
                                 <span className="text-sm text-muted-foreground">
                                     Running: {stats.running}
                                 </span>
@@ -235,8 +356,7 @@ export function DatabricksMigrationReport({
                         </div>
                     </CardContent>
                 </Card>
-
-                <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-6 gap-4 mb-6">
                     <Card className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -244,14 +364,15 @@ export function DatabricksMigrationReport({
                                 <p className="text-2xl font-bold text-foreground">{stats.total}</p>
                             </div>
                             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Loader2 className="w-5 h-5 text-primary" />
+                                <List className="w-5 h-5 text-primary" />
                             </div>
                         </div>
                     </Card>
+
                     <Card className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground">Succeeded</p>
+                                <p className="text-sm text-muted-foreground">Created</p>
                                 <p className="text-2xl font-bold text-success">{stats.success}</p>
                             </div>
                             <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
@@ -259,6 +380,7 @@ export function DatabricksMigrationReport({
                             </div>
                         </div>
                     </Card>
+
                     <Card className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -266,10 +388,11 @@ export function DatabricksMigrationReport({
                                 <p className="text-2xl font-bold text-running">{stats.running}</p>
                             </div>
                             <div className="w-10 h-10 rounded-lg bg-running/10 flex items-center justify-center">
-                                <Loader2 className="w-5 h-5 text-running animate-spin" />
+                                <Loader2 className={`w-5 h-5 text-running ${stats.running > 0 ? 'animate-spin' : ''}`} />
                             </div>
                         </div>
                     </Card>
+
                     <Card className="p-4">
                         <div className="flex items-center justify-between">
                             <div>
@@ -278,6 +401,30 @@ export function DatabricksMigrationReport({
                             </div>
                             <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
                                 <XCircle className="w-5 h-5 text-destructive" />
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Replaced</p>
+                                <p className="text-2xl font-bold text-blue-600">{stats.replaced}</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                <RefreshCw className="w-5 h-5 text-blue-600" />
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-muted-foreground">Skipped</p>
+                                <p className="text-2xl font-bold text-gray-600">{stats.skipped}</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-lg bg-gray-500/10 flex items-center justify-center">
+                                <Minus className="w-5 h-5 text-gray-600" />
                             </div>
                         </div>
                     </Card>
@@ -391,6 +538,21 @@ export function DatabricksMigrationReport({
                     </div>
                 )}
             </main>
+
+            <DatabricksMigrationReportDialog
+                open={showReportDialog}
+                onOpenChange={setShowReportDialog}
+                items={itemsToExport}
+                selectedOnly={selectedItems.size > 0}
+            />
+
+            <ReplaceNotebooksDialog
+                open={showReplaceDialog}
+                notebooks={pausedNotebooks}
+                isMigrating={false}
+                onReplace={handleReplaceNotebooks}
+                onSkipAll={handleSkipNotebooks}
+            />
         </div>
     );
 }

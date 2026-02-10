@@ -49,6 +49,8 @@ interface DatabricksMigrationWorkspaceProps {
   onLogout: () => void;
   onBack: () => void;
   onMigrationComplete: (items: any[]) => void;
+  onMigrationUpdate: (updateFn: (prev: any[]) => any[]) => void;
+  onWorkspaceSelected: (workspaceId: string) => void
   apiResponse: {
     counts: {
       notebooks: number;
@@ -75,6 +77,8 @@ export function DatabricksMigrationWorkspace({
   onLogout,
   onBack,
   onMigrationComplete,
+  onMigrationUpdate,
+  onWorkspaceSelected,
   apiResponse
 }: DatabricksMigrationWorkspaceProps) {
   const { toast } = useToast();
@@ -86,7 +90,6 @@ export function DatabricksMigrationWorkspace({
     name: job.settings?.name || `Job ${index + 1}`,
     schedule: job.settings?.schedule?.quartz_cron_expression ||
       job.settings?.trigger?.pause_status || "Manual",
-    createdBy : job.creator_user_name || "N/A",
     lastRun: job.last_run?.start_time ?
       new Date(job.last_run.start_time).toLocaleString() : "N/A",
     cluster: job.settings?.tasks?.[0]?.existing_cluster_id ||
@@ -110,7 +113,7 @@ export function DatabricksMigrationWorkspace({
   const transformedClusters = (apiResponse?.clusters || []).map((cluster: any, index: number) => ({
     id: cluster.cluster_id || index.toString(),
     name: cluster.cluster_name || `Cluster ${index + 1}`,
-    createdBy: cluster.creator_user_name || "N/A",
+    type: cluster.cluster_source || "Interactive",
     state: cluster.state || "Unknown",
     runtime: cluster.spark_version || "N/A",
     workers: cluster.num_workers !== undefined ? cluster.num_workers.toString() : "N/A",
@@ -132,6 +135,19 @@ export function DatabricksMigrationWorkspace({
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [showFabricModal, setShowFabricModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const paginateData = (data: any[]) => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    return data.slice(startIndex, startIndex + rowsPerPage);
+  };
+
+  // Reset to page 1 when switching tabs
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
 
   const handleFabricConnect = (apiResponse: any) => {
     setShowFabricModal(false);
@@ -231,8 +247,7 @@ export function DatabricksMigrationWorkspace({
     }
   };
 
-  // Helper function to migrate notebooks
-  const migrateNotebooks = async (workspace: any, notebooks: any[]) => {
+  const migrateNotebooks = async (workspace: any, notebooks: any[], replaceIfExists: boolean = false) => {
     const payload = {
       tenantId: fabricCredentials!.tenantId,
       clientId: fabricCredentials!.clientId,
@@ -240,6 +255,7 @@ export function DatabricksMigrationWorkspace({
       workspaceId: workspace.id,
       databricksUrl: databricksCredentials!.databricksUrl,
       personalAccessToken: databricksCredentials!.personalAccessToken,
+      replaceIfExists: replaceIfExists,
       notebooks: notebooks.map(nb => ({
         name: nb.name,
         path: nb.path
@@ -266,17 +282,25 @@ export function DatabricksMigrationWorkspace({
     const result = await response.json();
     console.log("Notebook migration result:", result);
 
-    return notebooks.map(item => {
+
+    const alreadyExistingNotebooks: any[] = [];
+
+    notebooks.forEach(item => {
       const detail = result.details.find((d: any) => d.name === item.name);
-      
-      let status: "Success" | "Failed" | "Running" = "Running";
+
+      let status: Status = "Success";
       let errorMessage: string | undefined = undefined;
 
       if (detail) {
         if (detail.status === "created") {
           status = "Success";
+        } else if (detail.status === "replaced") {
+          status = "Replaced";
         } else if (detail.status === "already-exists") {
-          status = "Failed";
+          status = "Paused";  // Just set to Paused
+          errorMessage = "already exists";
+        } else if (detail.status === "skipped") {
+          status = "Skipped";
           errorMessage = "already exists";
         } else if (detail.status === "failed") {
           status = "Failed";
@@ -284,15 +308,23 @@ export function DatabricksMigrationWorkspace({
         }
       }
 
-      return {
-        ...item,
-        targetWorkspace: workspace.name,
-        status,
-        errorMessage,
-        migrationStatus: detail?.status || "unknown"
-      };
+      onMigrationUpdate((prevItems) =>
+        prevItems.map(prevItem =>
+          prevItem.id === item.id
+            ? {
+              ...prevItem,
+              status,
+              errorMessage,
+              targetWorkspace: workspace.name
+            }
+            : prevItem
+        )
+      );
     });
+
+    return null;
   };
+
 
   // Helper function to migrate jobs
   const migrateJobs = async (workspace: any, jobs: any[]) => {
@@ -326,16 +358,13 @@ export function DatabricksMigrationWorkspace({
     const result = await response.json();
     console.log("Job migration result:", result);
 
-    // Process each job based on the API response
-    return jobs.map(item => {
-      // Check in created array
+    // Process each job and update individually
+    jobs.forEach(item => {
       const createdDetail = result.created?.find((d: any) => d.job_id === item.id);
-      // Check in already_exist array
       const existsDetail = result.already_exist?.find((d: any) => d.job_id === item.id);
-      // Check in failed array
       const failedDetail = result.failed?.find((d: any) => d.job_id === item.id);
-      
-      let status: "Success" | "Failed" | "Running" = "Running";
+
+      let status: "Success" | "Failed" = "Success";
       let errorMessage: string | undefined = undefined;
       let fabricPipelineId: string | undefined = undefined;
 
@@ -351,15 +380,23 @@ export function DatabricksMigrationWorkspace({
         errorMessage = failedDetail.error || "Migration failed";
       }
 
-      return {
-        ...item,
-        targetWorkspace: workspace.name,
-        status,
-        errorMessage,
-        fabricPipelineId,
-        migrationStatus: createdDetail ? "created" : existsDetail ? "already-exists" : failedDetail ? "failed" : "unknown"
-      };
+      // Update this specific item in the report
+      onMigrationUpdate((prevItems) =>
+        prevItems.map(prevItem =>
+          prevItem.id === item.id
+            ? {
+              ...prevItem,
+              status,
+              errorMessage,
+              fabricPipelineId,
+              targetWorkspace: workspace.name
+            }
+            : prevItem
+        )
+      );
     });
+
+    return null; // We're updating inline, don't need to return
   };
 
   // Helper function to migrate clusters
@@ -399,19 +436,17 @@ export function DatabricksMigrationWorkspace({
     const result = await response.json();
     console.log("Cluster migration result:", result);
 
-    // Process each cluster based on the API response
-    return clusters.map(item => {
-      // Check if cluster is in Success array (by name or id)
-      const isSuccess = result.Success?.some((name: string) => 
+    // Process each cluster and update individually
+    clusters.forEach(item => {
+      const isSuccess = result.Success?.some((name: string) =>
         name === item.name || name === item.id
       );
-      
-      // Check if cluster is in Failed array
-      const failedDetail = result.Failed?.find((f: any) => 
+
+      const failedDetail = result.Failed?.find((f: any) =>
         f.name === item.name || f.name === item.id
       );
-      
-      let status: "Success" | "Failed" | "Running" = "Running";
+
+      let status: "Success" | "Failed" = "Success";
       let errorMessage: string | undefined = undefined;
 
       if (isSuccess) {
@@ -421,14 +456,22 @@ export function DatabricksMigrationWorkspace({
         errorMessage = failedDetail.message || "Migration failed";
       }
 
-      return {
-        ...item,
-        targetWorkspace: workspace.name,
-        status,
-        errorMessage,
-        migrationStatus: isSuccess ? "created" : failedDetail ? "failed" : "unknown"
-      };
+      // Update this specific item in the report
+      onMigrationUpdate((prevItems) =>
+        prevItems.map(prevItem =>
+          prevItem.id === item.id
+            ? {
+              ...prevItem,
+              status,
+              errorMessage,
+              targetWorkspace: workspace.name
+            }
+            : prevItem
+        )
+      );
     });
+
+    return null; // We're updating inline, don't need to return
   };
 
   const handleStartMigration = async (workspace: any) => {
@@ -464,6 +507,8 @@ export function DatabricksMigrationWorkspace({
       return;
     }
 
+    onWorkspaceSelected(workspace.id);
+
     setIsMigrating(true);
     setShowTargetModal(false);
 
@@ -472,6 +517,7 @@ export function DatabricksMigrationWorkspace({
     const initialMigrationItems = allItemsToMigrate.map(item => ({
       ...item,
       targetWorkspace: workspace.name,
+      targetWorkspaceId: workspace.id,
       status: "Running" as const,
     }));
 
@@ -481,82 +527,93 @@ export function DatabricksMigrationWorkspace({
     // Step 3: Start migrations in parallel
     try {
       const results = await Promise.allSettled([
-        // Migrate notebooks if any
-        notebooksToMigrate.length > 0 ? migrateNotebooks(workspace, notebooksToMigrate) : Promise.resolve(null),
-        // Migrate jobs if any
+        notebooksToMigrate.length > 0 ? migrateNotebooks(workspace, notebooksToMigrate, false) : Promise.resolve(null),
         jobsToMigrate.length > 0 ? migrateJobs(workspace, jobsToMigrate) : Promise.resolve(null),
-        // Migrate clusters if any
         clustersToMigrate.length > 0 ? migrateClusters(workspace, clustersToMigrate, workspace.capacity) : Promise.resolve(null)
       ]);
 
+      // After the Promise.allSettled
       const [notebookResult, jobResult, clusterResult] = results;
 
-      // Combine results
-      const updatedItems: any[] = [];
 
-      // Process notebook results
-      if (notebookResult.status === 'fulfilled' && notebookResult.value) {
-        updatedItems.push(...notebookResult.value);
-      } else if (notebookResult.status === 'rejected') {
-        // All notebooks failed
-        updatedItems.push(...notebooksToMigrate.map(item => ({
-          ...item,
-          targetWorkspace: workspace.name,
-          status: "Failed" as const,
-          errorMessage: "Notebook migration failed"
-        })));
+      // Handle rejected promises (entire migration type failed)
+      if (notebookResult.status === 'rejected') {
+        notebooksToMigrate.forEach(item => {
+          onMigrationUpdate((prevItems) =>
+            prevItems.map(prevItem =>
+              prevItem.id === item.id
+                ? {
+                  ...prevItem,
+                  status: "Failed" as const,
+                  errorMessage: "Notebook migration failed",
+                  targetWorkspace: workspace.name
+                }
+                : prevItem
+            )
+          );
+        });
       }
 
-      // Process job results
-      if (jobResult.status === 'fulfilled' && jobResult.value) {
-        updatedItems.push(...jobResult.value);
-      } else if (jobResult.status === 'rejected') {
-        // All jobs failed
-        updatedItems.push(...jobsToMigrate.map(item => ({
-          ...item,
-          targetWorkspace: workspace.name,
-          status: "Failed" as const,
-          errorMessage: "Job migration failed"
-        })));
+      if (jobResult.status === 'rejected') {
+        jobsToMigrate.forEach(item => {
+          onMigrationUpdate((prevItems) =>
+            prevItems.map(prevItem =>
+              prevItem.id === item.id
+                ? {
+                  ...prevItem,
+                  status: "Failed" as const,
+                  errorMessage: "Job migration failed",
+                  targetWorkspace: workspace.name
+                }
+                : prevItem
+            )
+          );
+        });
       }
 
-      // Process cluster results
-      if (clusterResult.status === 'fulfilled' && clusterResult.value) {
-        updatedItems.push(...clusterResult.value);
-      } else if (clusterResult.status === 'rejected') {
-        // All clusters failed
-        updatedItems.push(...clustersToMigrate.map(item => ({
-          ...item,
-          targetWorkspace: workspace.name,
-          status: "Failed" as const,
-          errorMessage: "Cluster migration failed"
-        })));
+      if (clusterResult.status === 'rejected') {
+        clustersToMigrate.forEach(item => {
+          onMigrationUpdate((prevItems) =>
+            prevItems.map(prevItem =>
+              prevItem.id === item.id
+                ? {
+                  ...prevItem,
+                  status: "Failed" as const,
+                  errorMessage: "Cluster migration failed",
+                  targetWorkspace: workspace.name
+                }
+                : prevItem
+            )
+          );
+        });
       }
 
-      // Step 4: Update the report with final statuses
-      onMigrationComplete(updatedItems);
-
-      // Show summary toast
-      const successCount = updatedItems.filter(i => i.status === "Success").length;
-      const failedCount = updatedItems.filter(i => i.status === "Failed").length;
-
+      // Show completion toast
       toast({
         title: "Migration Complete",
-        description: `Successfully migrated: ${successCount}, Failed: ${failedCount}`,
+        description: notebookResult.status === 'fulfilled' && notebookResult.value?.alreadyExisting
+          ? "Some notebooks already exist. Please take action."
+          : "Check the report for detailed results",
       });
 
     } catch (error) {
       console.error("Migration error:", error);
-      
-      // Update all items to Failed status
-      const failedItems = allItemsToMigrate.map(item => ({
-        ...item,
-        targetWorkspace: workspace.name,
-        status: "Failed" as const,
-        errorMessage: error instanceof Error ? error.message : "An error occurred during migration"
-      }));
-      
-      onMigrationComplete(failedItems);
+
+      // Update all items to Failed status using onMigrationUpdate
+      allItemsToMigrate.forEach(item => {
+        onMigrationUpdate((prevItems) =>
+          prevItems.map(prevItem =>
+            prevItem.id === item.id
+              ? {
+                ...prevItem,
+                status: "Failed" as const,
+                errorMessage: error instanceof Error ? error.message : "An error occurred during migration",
+                targetWorkspace: workspace.name
+              }
+              : prevItem
+          )
+        );
+      });
 
       toast({
         title: "Migration Failed",
@@ -788,8 +845,8 @@ export function DatabricksMigrationWorkspace({
       <div className="flex-1">
         <main className="p-6 animate-fade-in">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            {/* <span>Home</span>
-            <ChevronRight className="w-4 h-4" /> */}
+            <span>Home</span>
+            <ChevronRight className="w-4 h-4" />
             <span>Databricks Workspace</span>
             <ChevronRight className="w-4 h-4" />
             <span className="text-foreground font-medium">Discovery Results</span>
@@ -813,7 +870,7 @@ export function DatabricksMigrationWorkspace({
             </Button>
           </div>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+          <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as TabType)}>
             <TabsList className="bg-muted/50 mb-4">
               <TabsTrigger value="jobs" className="gap-2">
                 <Briefcase className="w-4 h-4" />
@@ -912,10 +969,9 @@ export function DatabricksMigrationWorkspace({
                         />
                       </TableHead>
                       <TableHead>JOB NAME</TableHead>
-                      <TableHead>CREATED BY</TableHead>
                       <TableHead>SCHEDULE</TableHead>
-                      {/* <TableHead>CLUSTER</TableHead> */}
-                      {/* <TableHead>LAST RUN</TableHead> */}
+                      <TableHead>CLUSTER</TableHead>
+                      <TableHead>LAST RUN</TableHead>
                       <TableHead>STATUS</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -927,7 +983,7 @@ export function DatabricksMigrationWorkspace({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredJobs.map((job) => (
+                      paginateData(filteredJobs).map((job) => (
                         <TableRow key={job.id} className="hover:bg-muted/50">
                           <TableCell>
                             <Checkbox
@@ -943,10 +999,9 @@ export function DatabricksMigrationWorkspace({
                               <span className="font-medium text-primary">{job.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{job.createdBy}</TableCell>
                           <TableCell>{job.schedule}</TableCell>
-                          {/* <TableCell>{job.cluster}</TableCell>
-                          <TableCell>{job.lastRun}</TableCell> */}
+                          <TableCell>{job.cluster}</TableCell>
+                          <TableCell>{job.lastRun}</TableCell>
                           <TableCell>
                             <StatusBadge status={job.status} />
                           </TableCell>
@@ -972,7 +1027,7 @@ export function DatabricksMigrationWorkspace({
                       <TableHead className="min-w-[200px]">NOTEBOOK NAME</TableHead>
                       <TableHead className="w-[120px]">LANGUAGE</TableHead>
                       <TableHead className="min-w-[250px] max-w-[350px]">PATH</TableHead>
-                      {/* <TableHead className="w-[150px]">LAST MODIFIED</TableHead> */}
+                      <TableHead className="w-[150px]">LAST MODIFIED</TableHead>
                       <TableHead className="w-[100px]">STATUS</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -984,7 +1039,7 @@ export function DatabricksMigrationWorkspace({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredNotebooks.map((notebook) => (
+                      paginateData(filteredNotebooks).map((notebook) => (
                         <TableRow key={notebook.id} className="hover:bg-muted/50">
                           <TableCell>
                             <Checkbox
@@ -1006,7 +1061,7 @@ export function DatabricksMigrationWorkspace({
                               {notebook.path}
                             </div>
                           </TableCell>
-                          {/* <TableCell>{notebook.lastModified}</TableCell> */}
+                          <TableCell>{notebook.lastModified}</TableCell>
                           <TableCell>
                             <StatusBadge status={notebook.status} />
                           </TableCell>
@@ -1030,7 +1085,7 @@ export function DatabricksMigrationWorkspace({
                         />
                       </TableHead>
                       <TableHead>CLUSTER NAME</TableHead>
-                      <TableHead>CREATED BY</TableHead>
+                      <TableHead>TYPE</TableHead>
                       <TableHead>RUNTIME</TableHead>
                       <TableHead>WORKERS</TableHead>
                       <TableHead>STATUS</TableHead>
@@ -1044,7 +1099,7 @@ export function DatabricksMigrationWorkspace({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredClusters.map((cluster) => (
+                      paginateData(filteredClusters).map((cluster) => (
                         <TableRow key={cluster.id} className="hover:bg-muted/50">
                           <TableCell>
                             <Checkbox
@@ -1060,7 +1115,7 @@ export function DatabricksMigrationWorkspace({
                               <span className="font-medium text-primary">{cluster.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{cluster.createdBy}</TableCell>
+                          <TableCell>{cluster.type}</TableCell>
                           <TableCell>{cluster.runtime}</TableCell>
                           <TableCell>{cluster.workers}</TableCell>
                           <TableCell>
@@ -1075,9 +1130,54 @@ export function DatabricksMigrationWorkspace({
             </TabsContent>
           </Tabs>
 
+          {/* Pagination */}
           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-            <span>Rows per page: 10</span>
-            <span>1-{totalAssets} of {totalAssets}</span>
+            <span>
+              Showing {currentPage === 1 ? 1 : (currentPage - 1) * rowsPerPage + 1}-
+              {Math.min(currentPage * rowsPerPage,
+                activeTab === "jobs" ? filteredJobs.length :
+                  activeTab === "notebooks" ? filteredNotebooks.length :
+                    filteredClusters.length
+              )} of {
+                activeTab === "jobs" ? filteredJobs.length :
+                  activeTab === "notebooks" ? filteredNotebooks.length :
+                    filteredClusters.length
+              } {activeTab}
+            </span>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(p => p - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+
+              <span className="text-foreground">
+                Page {currentPage} of {Math.ceil((
+                  activeTab === "jobs" ? filteredJobs.length :
+                    activeTab === "notebooks" ? filteredNotebooks.length :
+                      filteredClusters.length
+                ) / rowsPerPage)}
+              </span>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={currentPage * rowsPerPage >= (
+                  activeTab === "jobs" ? filteredJobs.length :
+                    activeTab === "notebooks" ? filteredNotebooks.length :
+                      filteredClusters.length
+                )}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </main>
 
