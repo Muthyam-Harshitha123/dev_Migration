@@ -1,4 +1,8 @@
+
+
+
 // import { useState } from "react";
+// import { useNavigate } from "react-router-dom"; // ✅ ADDED
 // import { FabricJobsHome } from "./FabricJobsHome";
 // import { MigrationWorkspace } from "./MigrationWorkspace";
 // import { DatabricksMigrationWorkspace } from "./DatabricksMigrationWorkspace";
@@ -36,10 +40,13 @@
 //   id: string;
 //   name: string;
 //   type: "Job" | "Notebook" | "Cluster";
-//   status: "Success" | "Running" | "Failed" | "Ready";
+//   status: "Success" | "Running" | "Failed" | "Ready" | "Paused" | "Skipped" | "Replaced";
 //   targetWorkspace?: string;
+//   targetWorkspaceId?: string;
 //   lastModified: string;
 //   errorMessage?: string;
+//   runId?: string; // ✅ ADD THIS LINE
+//   fabricPipelineId?: string; // ✅ ADD THIS TOO (it's in your workspace component)
 //   schedule?: string;
 //   cluster?: string;
 //   language?: string;
@@ -50,17 +57,20 @@
 
 // const Index = () => {
 //   const { user, logout } = useAuth();
+//   const navigate = useNavigate(); // ✅ ADDED
 
 //   const [currentView, setCurrentView] = useState<AppView>("home");
 //   const [showSynapseModal, setShowSynapseModal] = useState(false);
 //   const [showDatabricksModal, setShowDatabricksModal] = useState(false);
-  
+
 //   // Separate state for each migration type
 //   const [synapseMigrationItems, setSynapseMigrationItems] = useState<SynapseMigrationItem[]>([]);
 //   const [databricksMigrationItems, setDatabricksMigrationItems] = useState<DatabricksMigrationItem[]>([]);
-  
+
 //   const [synapseApiResponse, setSynapseApiResponse] = useState<any>(null);
 //   const [databricksApiResponse, setDatabricksApiResponse] = useState<any>(null);
+
+//   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
 
 //   const handleLogout = () => {
 //     logout();
@@ -81,6 +91,7 @@
 //     setSynapseApiResponse(apiResponse);
 //     setShowSynapseModal(false);
 //     setCurrentView("synapse-workspace");
+//     navigate("/synapse-workspace"); // ✅ ADDED - Sync URL with state
 //   };
 
 //   const handleDatabricksConnect = (
@@ -90,6 +101,7 @@
 //     setDatabricksApiResponse(apiResponse);
 //     setShowDatabricksModal(false);
 //     setCurrentView("databricks-workspace");
+//     navigate("/databricks-workspace"); // ✅ ADDED - Sync URL with state
 //   };
 
 //   const handleSynapseMigrationComplete = (
@@ -100,6 +112,7 @@
 //     } else {
 //       setSynapseMigrationItems(items);
 //       setCurrentView("synapse-migration-report");
+//       navigate("/synapse-report"); // ✅ ADDED - Sync URL with state
 //     }
 //   };
 
@@ -112,6 +125,17 @@
 //   const handleDatabricksMigrationComplete = (items: DatabricksMigrationItem[]) => {
 //     setDatabricksMigrationItems(items);
 //     setCurrentView("databricks-migration-report");
+//     navigate("/databricks-report"); // ✅ ADDED - Sync URL with state
+//   };
+
+//   const handleDatabricksMigrationUpdate = (
+//     updateFn: (prev: DatabricksMigrationItem[]) => DatabricksMigrationItem[]
+//   ) => {
+//     setDatabricksMigrationItems(updateFn);
+//   };
+
+//   const handleWorkspaceSelected = (workspaceId: string) => {
+//     setSelectedWorkspaceId(workspaceId);
 //   };
 
 //   const handleBackToHome = () => {
@@ -120,6 +144,8 @@
 //     setDatabricksApiResponse(null);
 //     setSynapseMigrationItems([]);
 //     setDatabricksMigrationItems([]);
+//     setSelectedWorkspaceId(""); 
+//     navigate("/fabricjobshome"); // ✅ ADDED - Sync URL with state
 //   };
 
 //   return (
@@ -148,6 +174,8 @@
 //           onLogout={handleLogout}
 //           onBack={handleBackToHome}
 //           onMigrationComplete={handleDatabricksMigrationComplete}
+//           onMigrationUpdate={handleDatabricksMigrationUpdate}
+//           onWorkspaceSelected={handleWorkspaceSelected} 
 //           apiResponse={databricksApiResponse}
 //         />
 //       )}
@@ -161,12 +189,14 @@
 //       )}
 
 //       {currentView === "databricks-migration-report" && (
-//         <DatabricksMigrationReport
-//           items={databricksMigrationItems}
-//           onLogout={handleLogout}
-//           onBackToHome={handleBackToHome}
-//         />
-//       )}
+//     <DatabricksMigrationReport
+//         items={databricksMigrationItems}
+//         onLogout={handleLogout}
+//         onBackToHome={handleBackToHome}
+//         targetWorkspaceId={selectedWorkspaceId}
+//         onMigrationUpdate={handleDatabricksMigrationUpdate}  
+//     />
+// )}
 
 //       <ConnectSynapseModal
 //         open={showSynapseModal}
@@ -187,12 +217,9 @@
 
 
 
-//10feb
- 
- 
- 
+//18/02
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 import { FabricJobsHome } from "./FabricJobsHome";
 import { MigrationWorkspace } from "./MigrationWorkspace";
 import { DatabricksMigrationWorkspace } from "./DatabricksMigrationWorkspace";
@@ -230,10 +257,13 @@ interface DatabricksMigrationItem {
   id: string;
   name: string;
   type: "Job" | "Notebook" | "Cluster";
-  status: "Success" | "Running" | "Failed" | "Ready";
+  status: "Success" | "Running" | "Failed" | "Ready" | "Paused" | "Skipped" | "Replaced";
   targetWorkspace?: string;
+  targetWorkspaceId?: string;
   lastModified: string;
   errorMessage?: string;
+  runId?: string;
+  fabricPipelineId?: string;
   schedule?: string;
   cluster?: string;
   language?: string;
@@ -244,7 +274,7 @@ interface DatabricksMigrationItem {
  
 const Index = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate(); // ✅ ADDED
+  const navigate = useNavigate();
  
   const [currentView, setCurrentView] = useState<AppView>("home");
   const [showSynapseModal, setShowSynapseModal] = useState(false);
@@ -278,7 +308,7 @@ const Index = () => {
     setSynapseApiResponse(apiResponse);
     setShowSynapseModal(false);
     setCurrentView("synapse-workspace");
-    navigate("/synapse-workspace"); // ✅ ADDED - Sync URL with state
+    navigate("/synapse-workspace");
   };
  
   const handleDatabricksConnect = (
@@ -288,7 +318,7 @@ const Index = () => {
     setDatabricksApiResponse(apiResponse);
     setShowDatabricksModal(false);
     setCurrentView("databricks-workspace");
-    navigate("/databricks-workspace"); // ✅ ADDED - Sync URL with state
+    navigate("/databricks-workspace");
   };
  
   const handleSynapseMigrationComplete = (
@@ -299,7 +329,7 @@ const Index = () => {
     } else {
       setSynapseMigrationItems(items);
       setCurrentView("synapse-migration-report");
-      navigate("/synapse-report"); // ✅ ADDED - Sync URL with state
+      navigate("/synapse-report");
     }
   };
  
@@ -312,13 +342,30 @@ const Index = () => {
   const handleDatabricksMigrationComplete = (items: DatabricksMigrationItem[]) => {
     setDatabricksMigrationItems(items);
     setCurrentView("databricks-migration-report");
-    navigate("/databricks-report"); // ✅ ADDED - Sync URL with state
+    navigate("/databricks-report");
   };
  
+  // ✅ FIXED: Only protect Skipped/Replaced, allow all other updates
   const handleDatabricksMigrationUpdate = (
     updateFn: (prev: DatabricksMigrationItem[]) => DatabricksMigrationItem[]
   ) => {
-    setDatabricksMigrationItems(updateFn);
+    setDatabricksMigrationItems(prevItems => {
+      const newItems = updateFn(prevItems);
+     
+      // ✅ Only intervene for items that were Skipped or Replaced
+      return newItems.map((newItem) => {
+        const oldItem = prevItems.find(p => p.id === newItem.id);
+       
+        // ✅ ONLY protect if old status was Skipped or Replaced
+        if (oldItem && (oldItem.status === "Skipped" || oldItem.status === "Replaced")) {
+          // Keep the old item (prevents any changes to Skipped/Replaced items)
+          return oldItem;
+        }
+       
+        // ✅ For everything else, allow the update normally
+        return newItem;
+      });
+    });
   };
  
   const handleWorkspaceSelected = (workspaceId: string) => {
@@ -332,7 +379,7 @@ const Index = () => {
     setSynapseMigrationItems([]);
     setDatabricksMigrationItems([]);
     setSelectedWorkspaceId("");
-    navigate("/fabricjobshome"); // ✅ ADDED - Sync URL with state
+    navigate("/fabricjobshome");
   };
  
   return (
@@ -381,6 +428,7 @@ const Index = () => {
           onLogout={handleLogout}
           onBackToHome={handleBackToHome}
           targetWorkspaceId={selectedWorkspaceId}
+          onMigrationUpdate={handleDatabricksMigrationUpdate}
         />
       )}
  
