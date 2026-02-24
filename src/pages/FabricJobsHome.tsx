@@ -449,7 +449,7 @@ useEffect(() => {
                   />
                 </div>
 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                {/* <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-36 h-9">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -459,7 +459,7 @@ useEffect(() => {
                     <SelectItem value="Running">Running</SelectItem>
                     <SelectItem value="Failed">Failed</SelectItem>
                   </SelectContent>
-                </Select>
+                </Select> */}
 
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-36 h-9">

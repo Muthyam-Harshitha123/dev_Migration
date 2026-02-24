@@ -1,5 +1,6 @@
 
 
+//updated 18/02
 // import { useState } from "react";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // import { Button } from "@/components/ui/button";
@@ -266,7 +267,7 @@
 
 //     try {
 //       const response = await fetch(
-//         "https://databrickstofabric-fuhdb8a7dhbebrf5.eastus-01.azurewebsites.net/api/MigrateNotebooks?code=0KjRO6OQdRDSj6_ahlRgYhxO2dGy07eCqqegZMeuFJrzAzFuJcusuA==",
+//         "https://48.217.233.235/MigrateNotebooks",
 //         {
 //           method: "POST",
 //           headers: {
@@ -299,9 +300,12 @@
 
 //         let status: Status = "Success";
 //         let errorMessage: string | undefined = undefined;
+//         let runId: string | undefined = undefined;  // ✅ ADD THIS
 
 //         if (detail) {
 //           console.log(`Processing notebook "${item.name}" with status: ${detail.status}`);
+
+//           runId = detail.run_id || result.run_id;  // ✅ CAPTURE run_id from detail or root level
 
 //           // ✅ HANDLE ALL STATUS CASES
 //           if (detail.status === "created") {
@@ -332,16 +336,20 @@
 //           console.error(`⚠️ Notebook "${item.name}" not found in API response`);
 //           status = "Failed";
 //           errorMessage = "Not returned in API response";
+//           runId = result.run_id;  // ✅ Still save root-level run_id even if detail missing
 //         }
 
-//         // ✅ CRITICAL: Preserve ALL fields when updating
+//         console.log(`📝 Updating notebook "${item.name}" with runId:`, runId);  // ✅ DEBUG LOG
+
+//         // ✅ CRITICAL: Preserve ALL fields when updating + ADD runId
 //         onMigrationUpdate((prevItems) =>
 //           prevItems.map(prevItem =>
 //             prevItem.id === item.id
 //               ? {
-//                 ...prevItem,  // ✅ Spread first - keeps path, language, runId (if any), etc
+//                 ...prevItem,
 //                 status,
 //                 errorMessage,
+//                 runId,  // ✅ ADD THIS
 //                 targetWorkspace: workspace.name
 //               }
 //               : prevItem
@@ -373,7 +381,7 @@
 
 //     try {
 //       const response = await fetch(
-//         "https://databrickstofabric-fuhdb8a7dhbebrf5.eastus-01.azurewebsites.net/api/MigrateJob?code=e7lz1_ZOu--IpJDQY2Clu20N-oXkZQgN5A3GpqGvtsHYAzFuL1d4KQ==",
+//         "https://48.217.233.235/MigrateJob",
 //         {
 //           method: "POST",
 //           headers: {
@@ -476,7 +484,7 @@
 //   };
 
 
-//   const migrateClusters = async (workspace: any, clusters: any[], capacityId: string) => {
+// const migrateClusters = async (workspace: any, clusters: any[], capacityId: string) => {
 //     const payload = {
 //       databricks: {
 //         host: databricksCredentials!.databricksUrl,
@@ -496,7 +504,7 @@
 
 //     try {
 //       const response = await fetch(
-//         "https://databrickstofabric-fuhdb8a7dhbebrf5.eastus-01.azurewebsites.net/api/ClusterMigration?code=qgKVGHfeCG_K_LHs0UGkxqhZeou2CoF63d0adXhn9qErAzFu9KBvEQ==",
+//         "https://48.217.233.235/ClusterMigration",
 //         {
 //           method: "POST",
 //           headers: {
@@ -508,14 +516,17 @@
 
 //       console.log(`📥 Cluster API Response Status: ${response.status} ${response.statusText}`);
 
-//       if (!response.ok) {
-//         const errorText = await response.text();
-//         console.error(`❌ Cluster API Error Response:`, errorText);
-//         throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 200)}`);
-//       }
+//       // ✅ FIX: Try to parse JSON even on non-OK responses
+//       let result;
+//       const responseText = await response.text();
 
-//       const result = await response.json();
-//       console.log("📊 Cluster migration result:", JSON.stringify(result, null, 2));
+//       try {
+//         result = JSON.parse(responseText);
+//         console.log("📊 Cluster migration result:", JSON.stringify(result, null, 2));
+//       } catch (parseError) {
+//         console.error("❌ Failed to parse response as JSON:", responseText);
+//         throw new Error(`HTTP ${response.status}: ${responseText.substring(0, 200)}`);
+//       }
 
 //       if (!result || typeof result !== 'object') {
 //         console.error("❌ Invalid response structure:", result);
@@ -524,9 +535,14 @@
 
 //       // ✅ PROCESS EACH CLUSTER
 //       clusters.forEach(item => {
-//         const isSuccess = result.Success?.some((name: string) =>
-//           name === item.name || name === item.id
-//         );
+//         // ✅ FIX: Find this cluster in Success array (returns full object with run_id)
+//         const successDetail = result.Success?.find((successItem: any) => {
+//           // Handle both string and object responses
+//           if (typeof successItem === 'string') {
+//             return successItem === item.name || successItem === item.id;
+//           }
+//           return successItem.name === item.name || successItem.name === item.id;
+//         });
 
 //         const failedDetail = result.Failed?.find((f: any) =>
 //           f.name === item.name || f.name === item.id
@@ -534,18 +550,41 @@
 
 //         let status: Status = "Failed";
 //         let errorMessage: string | undefined = undefined;
+//         let runId: string | undefined = undefined;
 
-//         if (isSuccess) {
-//           console.log(`Cluster "${item.name}" migrated successfully`);
+//         if (successDetail) {
+//           console.log(`✅ Cluster "${item.name}" migrated successfully`);
 //           status = "Success";
+//           // ✅ CRITICAL FIX: Get run_id from the Success detail object
+//           runId = typeof successDetail === 'object' ? successDetail.run_id : undefined;
+//           console.log(`✅ Cluster "${item.name}" - Success with runId:`, runId);
 //         } else if (failedDetail) {
-//           console.error(`Cluster "${item.name}" failed:`, failedDetail.message);
+//           console.error(`❌ Cluster "${item.name}" failed:`, failedDetail.message);
 //           status = "Failed";
-//           errorMessage = failedDetail.message || "Migration failed";
+
+//           // ✅ CLEAN ERROR MESSAGE: Extract only the key part
+//           const rawMessage = failedDetail.message || "Migration failed";
+//           if (rawMessage.toLowerCase().includes("already exists")) {
+//             errorMessage = "already exists";
+//           } else {
+//             errorMessage = rawMessage;
+//           }
+
+//           // ✅ CRITICAL FIX: Get run_id from the Failed detail object
+//           runId = failedDetail.run_id;
+//           console.log(`❌ Cluster "${item.name}" - Failed with runId:`, runId);
 //         } else {
 //           console.error(`⚠️ Cluster "${item.name}" (${item.id}) not found in API response`);
 //           errorMessage = "Not returned in API response";
+//           // No run_id available if not in either array
 //         }
+
+//         console.log(`📝 Updating cluster "${item.name}" with:`, {
+//           status,
+//           errorMessage,
+//           runId,
+//           targetWorkspace: workspace.name
+//         });
 
 //         // ✅ CRITICAL: Preserve ALL fields when updating
 //         onMigrationUpdate((prevItems) =>
@@ -555,6 +594,7 @@
 //                 ...prevItem,  // ✅ Spread first - keeps runtime, workers, type, etc
 //                 status,
 //                 errorMessage,
+//                 runId,  // ✅ CRITICAL: Must include runId
 //                 targetWorkspace: workspace.name
 //               }
 //               : prevItem
@@ -621,7 +661,7 @@
 //     console.log("Items:", initialMigrationItems);
 //     // Step 2: Navigate to report immediately with "Running" status
 //     console.log("📤 Calling onMigrationComplete with items:", initialMigrationItems.length);
-//     onMigrationComplete(initialMigrationItems);  
+//     onMigrationComplete(initialMigrationItems);
 //     console.log("✅ onMigrationComplete called");
 
 //     // Step 3: Start migrations in parallel
@@ -1327,7 +1367,7 @@
 
 
 
-//updated 18/02
+//updated 20 feb
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1693,123 +1733,248 @@ export function DatabricksMigrationWorkspace({
   };
 
 
-  const migrateJobs = async (workspace: any, jobs: any[]) => {
-    const payload = {
-      tenantId: fabricCredentials!.tenantId,
-      clientId: fabricCredentials!.clientId,
-      clientSecret: fabricCredentials!.clientSecret,
-      workspaceId: workspace.id,
-      databricksUrl: databricksCredentials!.databricksUrl,
-      personalAccessToken: databricksCredentials!.personalAccessToken,
-      jobid: jobs.map(job => job.id)
-    };
+  // const migrateJobs = async (workspace: any, jobs: any[]) => {
+  //   const payload = {
+  //     tenantId: fabricCredentials!.tenantId,
+  //     clientId: fabricCredentials!.clientId,
+  //     clientSecret: fabricCredentials!.clientSecret,
+  //     workspaceId: workspace.id,
+  //     databricksUrl: databricksCredentials!.databricksUrl,
+  //     personalAccessToken: databricksCredentials!.personalAccessToken,
+  //     jobid: jobs.map(job => job.id)
+  //   };
 
-    console.log("📤 Job migration payload:", payload);
+  //   console.log("📤 Job migration payload:", payload);
 
-    try {
-      const response = await fetch(
-        "https://48.217.233.235/MigrateJob",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+  //   try {
+  //     const response = await fetch(
+  //       "https://48.217.233.235/MigrateJob",
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify(payload),
+  //       }
+  //     );
 
-      console.log(`📥 Job API Response Status: ${response.status} ${response.statusText}`);
+  //     console.log(`📥 Job API Response Status: ${response.status} ${response.statusText}`);
 
-      // ✅ FIX: Try to parse JSON even on non-OK responses (API returns 500 with valid JSON sometimes)
-      let result;
-      const responseText = await response.text();
+  //     // ✅ FIX: Try to parse JSON even on non-OK responses (API returns 500 with valid JSON sometimes)
+  //     let result;
+  //     const responseText = await response.text();
 
-      try {
-        result = JSON.parse(responseText);
-        console.log("📊 Job API Response (parsed):", JSON.stringify(result, null, 2));
-      } catch (parseError) {
-        console.error("❌ Failed to parse response as JSON:", responseText);
-        throw new Error(`HTTP ${response.status}: ${responseText.substring(0, 200)}`);
-      }
+  //     try {
+  //       result = JSON.parse(responseText);
+  //       console.log("📊 Job API Response (parsed):", JSON.stringify(result, null, 2));
+  //     } catch (parseError) {
+  //       console.error("❌ Failed to parse response as JSON:", responseText);
+  //       throw new Error(`HTTP ${response.status}: ${responseText.substring(0, 200)}`);
+  //     }
 
-      // If response is not OK but we got valid JSON, continue processing
-      // (The API sometimes returns 500 with a valid error structure)
-      if (!response.ok) {
-        console.warn(`⚠️ API returned ${response.status} but with valid JSON structure, processing anyway...`);
-      }
+  //     // If response is not OK but we got valid JSON, continue processing
+  //     // (The API sometimes returns 500 with a valid error structure)
+  //     if (!response.ok) {
+  //       console.warn(`⚠️ API returned ${response.status} but with valid JSON structure, processing anyway...`);
+  //     }
 
-      // ✅ VALIDATE RESPONSE STRUCTURE
-      if (!result || typeof result !== 'object') {
-        console.error("❌ Invalid response structure:", result);
-        throw new Error(`Invalid API response: expected object, got ${typeof result}`);
-      }
+  //     // ✅ VALIDATE RESPONSE STRUCTURE
+  //     if (!result || typeof result !== 'object') {
+  //       console.error("❌ Invalid response structure:", result);
+  //       throw new Error(`Invalid API response: expected object, got ${typeof result}`);
+  //     }
 
-      // ✅ CRITICAL FIX: Process each job and capture runId from ANY response array
-      jobs.forEach(item => {
-        const createdDetail = result.created?.find((d: any) => d.job_id === item.id);
-        const existsDetail = result.already_exist?.find((d: any) => d.job_id === item.id);
-        const failedDetail = result.failed?.find((d: any) => d.job_id === item.id);
+  //     // ✅ CRITICAL FIX: Process each job and capture runId from ANY response array
+  //     jobs.forEach(item => {
+  //       const createdDetail = result.created?.find((d: any) => d.job_id === item.id);
+  //       const existsDetail = result.already_exist?.find((d: any) => d.job_id === item.id);
+  //       const failedDetail = result.failed?.find((d: any) => d.job_id === item.id);
 
-        let status: Status = "Failed";
-        let errorMessage: string | undefined = undefined;
-        let fabricPipelineId: string | undefined = undefined;
-        let runId: string | undefined = undefined;
+  //       let status: Status = "Failed";
+  //       let errorMessage: string | undefined = undefined;
+  //       let fabricPipelineId: string | undefined = undefined;
+  //       let runId: string | undefined = undefined;
 
-        // ✅ CRITICAL: Capture runId from WHICHEVER array the job appears in
-        if (createdDetail) {
-          status = "Success";
-          fabricPipelineId = createdDetail.fabric_pipeline_id;
-          runId = createdDetail.run_id;
-          console.log(`✅ Job "${item.name}" - Success with runId:`, runId);
-        } else if (existsDetail) {
-          status = "Failed";
-          errorMessage = "already exists";
-          fabricPipelineId = existsDetail.fabric_pipeline_id;
-          runId = existsDetail.run_id;  // ✅ CAPTURE IT HERE TOO
-          console.log(`⚠️ Job "${item.name}" - Already exists with runId:`, runId);
-        } else if (failedDetail) {
-          status = "Failed";
-          errorMessage = failedDetail.error || "Migration failed";
-          runId = failedDetail.run_id;  // ✅ THIS IS THE CRITICAL FIX - WAS MISSING!
-          console.log(`❌ Job "${item.name}" - Failed with runId:`, runId, "Error:", errorMessage);
-        } else {
-          console.error(`⚠️ Job "${item.name}" (${item.id}) not found in any response array`);
-          errorMessage = "Not returned in API response";
-        }
+  //       // ✅ CRITICAL: Capture runId from WHICHEVER array the job appears in
+  //       if (createdDetail) {
+  //         status = "Success";
+  //         fabricPipelineId = createdDetail.fabric_pipeline_id;
+  //         runId = createdDetail.run_id;
+  //         console.log(`✅ Job "${item.name}" - Success with runId:`, runId);
+  //       } else if (existsDetail) {
+  //         status = "Failed";
+  //         errorMessage = "already exists";
+  //         fabricPipelineId = existsDetail.fabric_pipeline_id;
+  //         runId = existsDetail.run_id;  // ✅ CAPTURE IT HERE TOO
+  //         console.log(`⚠️ Job "${item.name}" - Already exists with runId:`, runId);
+  //       } else if (failedDetail) {
+  //         status = "Failed";
+  //         errorMessage = failedDetail.error || "Migration failed";
+  //         runId = failedDetail.run_id;  // ✅ THIS IS THE CRITICAL FIX - WAS MISSING!
+  //         console.log(`❌ Job "${item.name}" - Failed with runId:`, runId, "Error:", errorMessage);
+  //       } else {
+  //         console.error(`⚠️ Job "${item.name}" (${item.id}) not found in any response array`);
+  //         errorMessage = "Not returned in API response";
+  //       }
 
-        // ✅ CRITICAL: Log what we're about to save (for debugging)
-        console.log(`📝 Updating job "${item.name}" with:`, {
-          status,
-          errorMessage,
-          runId,  // ✅ This should ALWAYS be logged
-          fabricPipelineId
-        });
+  //       // ✅ CRITICAL: Log what we're about to save (for debugging)
+  //       console.log(`📝 Updating job "${item.name}" with:`, {
+  //         status,
+  //         errorMessage,
+  //         runId,  // ✅ This should ALWAYS be logged
+  //         fabricPipelineId
+  //       });
 
-        // ✅ CRITICAL: Preserve ALL existing fields when updating
-        onMigrationUpdate((prevItems) =>
-          prevItems.map(prevItem =>
-            prevItem.id === item.id
-              ? {
-                ...prevItem,  // ✅ Spread first to keep ALL fields
-                status,
-                errorMessage,
-                fabricPipelineId,
-                runId,  // ✅ MUST be included
-                targetWorkspace: workspace.name
-              }
-              : prevItem
-          )
-        );
-      });
+  //       // ✅ CRITICAL: Preserve ALL existing fields when updating
+  //       onMigrationUpdate((prevItems) =>
+  //         prevItems.map(prevItem =>
+  //           prevItem.id === item.id
+  //             ? {
+  //               ...prevItem,  // ✅ Spread first to keep ALL fields
+  //               status,
+  //               errorMessage,
+  //               fabricPipelineId,
+  //               runId,  // ✅ MUST be included
+  //               targetWorkspace: workspace.name
+  //             }
+  //             : prevItem
+  //         )
+  //       );
+  //     });
 
-      return null;
+  //     return null;
 
-    } catch (error) {
-      console.error("💥 Job migration error:", error);
-      throw error;
-    }
+  //   } catch (error) {
+  //     console.error("💥 Job migration error:", error);
+  //     throw error;
+  //   }
+  // };
+const migrateJobs = async (workspace: any, jobs: any[]) => {
+  const payload = {
+    tenantId: fabricCredentials!.tenantId,
+    clientId: fabricCredentials!.clientId,
+    clientSecret: fabricCredentials!.clientSecret,
+    workspaceId: workspace.id,
+    databricksUrl: databricksCredentials!.databricksUrl,
+    personalAccessToken: databricksCredentials!.personalAccessToken,
+    jobid: jobs.map(job => job.id)
   };
 
+  console.log("📤 Job migration payload:", payload);
+
+  try {
+    // Step 1: Start the durable orchestration
+    const startResponse = await fetch(
+      "https://databrickstofabric-fuhdb8a7dhbebrf5.eastus-01.azurewebsites.net/api/MigrateJobsHttpStarter",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!startResponse.ok) {
+      const errorText = await startResponse.text();
+      throw new Error(`Failed to start job migration: HTTP ${startResponse.status}: ${errorText.substring(0, 200)}`);
+    }
+
+    const orchestrationInfo = await startResponse.json();
+    const statusQueryUri = orchestrationInfo.statusQueryGetUri;
+
+    if (!statusQueryUri) {
+      throw new Error("No statusQueryGetUri returned from orchestration starter");
+    }
+
+    console.log(`🚀 Job migration orchestration started. Instance ID: ${orchestrationInfo.instanceId}`);
+    console.log(`🔍 Polling status at: ${statusQueryUri}`);
+
+    // Step 2: Poll until completed
+    const MAX_POLLS = 120;       // 10 minutes max (120 * 5s)
+    const POLL_INTERVAL_MS = 5000;
+
+    let result: any = null;
+
+    for (let attempt = 1; attempt <= MAX_POLLS; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+
+      const statusResponse = await fetch(statusQueryUri);
+
+      if (!statusResponse.ok) {
+        console.warn(`⚠️ Poll attempt ${attempt} failed: HTTP ${statusResponse.status}`);
+        continue;
+      }
+
+      const statusData = await statusResponse.json();
+      console.log(`📊 Poll ${attempt}: runtimeStatus = ${statusData.runtimeStatus}`);
+
+      if (statusData.runtimeStatus === "Completed") {
+        result = statusData.output;
+        console.log("✅ Orchestration completed:", JSON.stringify(result, null, 2));
+        break;
+      } else if (statusData.runtimeStatus === "Failed" || statusData.runtimeStatus === "Terminated") {
+        throw new Error(`Job migration orchestration ${statusData.runtimeStatus.toLowerCase()}`);
+      }
+      // runtimeStatus === "Running" or "Pending" — keep polling
+    }
+
+    if (!result) {
+      throw new Error("Job migration timed out after polling");
+    }
+
+    // Step 3: Process results (same logic as before)
+    if (!result || typeof result !== 'object') {
+      throw new Error(`Invalid API response: expected object, got ${typeof result}`);
+    }
+
+    jobs.forEach(item => {
+      const createdDetail = result.created?.find((d: any) => d.job_id === item.id);
+      const existsDetail = result.already_exist?.find((d: any) => d.job_id === item.id);
+      const failedDetail = result.failed?.find((d: any) => d.job_id === item.id);
+
+      let status: Status = "Failed";
+      let errorMessage: string | undefined = undefined;
+      let fabricPipelineId: string | undefined = undefined;
+      let runId: string | undefined = undefined;
+
+      if (createdDetail) {
+        status = "Success";
+        fabricPipelineId = createdDetail.fabric_pipeline_id;
+        runId = createdDetail.run_id;
+        console.log(`✅ Job "${item.name}" - Success with runId:`, runId);
+      } else if (existsDetail) {
+        status = "Failed";
+        errorMessage = "already exists";
+        fabricPipelineId = existsDetail.pipeline_id;
+        runId = existsDetail.run_id;
+        console.log(`⚠️ Job "${item.name}" - Already exists with runId:`, runId);
+      } else if (failedDetail) {
+        status = "Failed";
+        errorMessage = failedDetail.error || "Migration failed";
+        runId = failedDetail.run_id;
+        console.log(`❌ Job "${item.name}" - Failed with runId:`, runId, "Error:", errorMessage);
+      } else {
+        console.error(`⚠️ Job "${item.name}" (${item.id}) not found in any response array`);
+        errorMessage = "Not returned in API response";
+      }
+
+      console.log(`📝 Updating job "${item.name}" with:`, { status, errorMessage, runId, fabricPipelineId });
+
+      onMigrationUpdate((prevItems) =>
+        prevItems.map(prevItem =>
+          prevItem.id === item.id
+            ? { ...prevItem, status, errorMessage, fabricPipelineId, runId, targetWorkspace: workspace.name }
+            : prevItem
+        )
+      );
+    });
+
+    return null;
+
+  } catch (error) {
+    console.error("💥 Job migration error:", error);
+    throw error;
+  }
+};
 
 const migrateClusters = async (workspace: any, clusters: any[], capacityId: string) => {
     const payload = {
@@ -2468,15 +2633,13 @@ const migrateClusters = async (workspace: any, clusters: any[], capacityId: stri
                       </TableHead>
                       <TableHead>JOB NAME</TableHead>
                       <TableHead>SCHEDULE</TableHead>
-                      <TableHead>CLUSTER</TableHead>
-                      <TableHead>LAST RUN</TableHead>
                       <TableHead>STATUS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredJobs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                           No jobs found matching your filters
                         </TableCell>
                       </TableRow>
@@ -2497,9 +2660,9 @@ const migrateClusters = async (workspace: any, clusters: any[], capacityId: stri
                               <span className="font-medium text-primary">{job.name}</span>
                             </div>
                           </TableCell>
+                          
                           <TableCell>{job.schedule}</TableCell>
-                          <TableCell>{job.cluster}</TableCell>
-                          <TableCell>{job.lastRun}</TableCell>
+                          
                           <TableCell>
                             <StatusBadge status={job.status} />
                           </TableCell>
@@ -2525,14 +2688,13 @@ const migrateClusters = async (workspace: any, clusters: any[], capacityId: stri
                       <TableHead className="min-w-[200px]">NOTEBOOK NAME</TableHead>
                       <TableHead className="w-[120px]">LANGUAGE</TableHead>
                       <TableHead className="min-w-[250px] max-w-[350px]">PATH</TableHead>
-                      <TableHead className="w-[150px]">LAST MODIFIED</TableHead>
                       <TableHead className="w-[100px]">STATUS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredNotebooks.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           No notebooks found matching your filters
                         </TableCell>
                       </TableRow>
@@ -2559,7 +2721,6 @@ const migrateClusters = async (workspace: any, clusters: any[], capacityId: stri
                               {notebook.path}
                             </div>
                           </TableCell>
-                          <TableCell>{notebook.lastModified}</TableCell>
                           <TableCell>
                             <StatusBadge status={notebook.status} />
                           </TableCell>

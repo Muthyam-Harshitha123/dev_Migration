@@ -1,3 +1,4 @@
+// //18/02
 // import { useState } from "react";
 // import { useAzureCredentials } from "@/contexts/AzureCredentialsContext";
 // import { AppHeader } from "@/components/AppHeader";
@@ -37,6 +38,7 @@
 //   X,
 //   ChevronRight,
 //   Loader2,
+//   ChevronLeft,
 // } from "lucide-react";
 // import { useFabricCredentials } from "@/contexts/FabricCredentialsContext";
 // import { ConnectFabricModal } from "@/components/modals/ConnectFabricModal";
@@ -139,6 +141,8 @@
 //   const [typeFilter, setTypeFilter] = useState<string>("all");
 //   const [isMigrating, setIsMigrating] = useState(false);
 //   const [migrationError, setMigrationError] = useState<string | null>(null);
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [rowsPerPage, setRowsPerPage] = useState(10);
 
 //   const { sparkPools, notebooks, pipelines, linkedServices } = transformedData;
 
@@ -148,6 +152,17 @@
 //     conflicts: 0,
 //   };
 //   const [showFabricModal, setShowFabricModal] = useState(false);
+
+//   // Simple pagination
+//   const paginateData = (data: any[]) => {
+//     const startIndex = (currentPage - 1) * rowsPerPage;
+//     return data.slice(startIndex, startIndex + rowsPerPage);
+//   };
+
+//   const handleTabChange = (tab: TabType) => {
+//     setActiveTab(tab);
+//     setCurrentPage(1);
+//   };
 
 //   // Filter functions
 //   const filterBySearch = <T extends Record<string, any>>(items: T[]) => {
@@ -367,7 +382,7 @@
 
 //         try {
 //           const sparkResponse = await fetch(
-//             `https://synapsetofabricfunc-fmg2d2ejctg2eacu.eastus-01.azurewebsites.net/api/SparkPoolMigration?code=HfwGAGfirHgSTgWoZKTY_pUKlOnDUQe1moz5E9WyQm25AzFutfxqPA==`,
+//             `https://48.217.233.235/SynapseSparkPoolMigration`,
 //             {
 //               method: "POST",
 //               headers: { "Content-Type": "application/json" },
@@ -425,7 +440,7 @@
 
 //         try {
 //           const notebookResponse = await fetch(
-//             `https://synapsetofabricfunc-fmg2d2ejctg2eacu.eastus-01.azurewebsites.net/api/NotebooksMigration?code=_L6yqszQwmXCOK3O1JV6mYvDYJ_Pc8SKhattlpxeG1e5AzFuF7IXoQ==`,
+//             `https://48.217.233.235/SynapseNotebooksMigration`,
 //             {
 //               method: "POST",
 //               headers: { "Content-Type": "application/json" },
@@ -482,7 +497,7 @@
 
 //         try {
 //           const pipelineResponse = await fetch(
-//             `https://synapsetofabricfunc-fmg2d2ejctg2eacu.eastus-01.azurewebsites.net/api/PipelinesMigration?code=3KEsNu4LwfkgincTCz9-j5YZdj14EQkItywZpK4DfgLmAzFuxqtOYg==`,
+//             `https://48.217.233.235/SynapsePipelinesMigration`,
 //             {
 //               method: "POST",
 //               headers: { "Content-Type": "application/json" },
@@ -668,7 +683,7 @@
 //                 </div>
 //               )}
 
-//               {/* {selectedItems.linkedServices.length > 0 && (
+//               {selectedItems.linkedServices.length > 0 && (
 //                 <div>
 //                   <h4 className="font-medium mb-3 flex items-center gap-2">
 //                     <Link2 className="w-4 h-4 text-primary" />
@@ -697,7 +712,7 @@
 //                       ))}
 //                   </div>
 //                 </div>
-//               )} */}
+//               )}
 
 //               <div className="flex justify-between pt-4 border-t">
 //                 <Button variant="outline" onClick={() => setShowReview(false)}>
@@ -752,10 +767,10 @@
 //         <main className="p-6 animate-fade-in">
 //           {/* Breadcrumb */}
 //           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-//             {/* <span>Home</span> */}
-//             {/* <ChevronRight className="w-4 h-4" />
-//             <span>Projects</span> */}
-//             {/* <ChevronRight className="w-4 h-4" /> */}
+//             <span>Home</span>
+//             <ChevronRight className="w-4 h-4" />
+//             <span>Projects</span>
+//             <ChevronRight className="w-4 h-4" />
 //             <span>{apiResponse.workspace}</span>
 //             <ChevronRight className="w-4 h-4" />
 //             <span className="text-foreground font-medium">Discovery Results</span>
@@ -829,7 +844,7 @@
 //           </div>
 
 //           {/* Tabs */}
-//           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+//           <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as TabType)}>
 //             <TabsList className="bg-muted/50 mb-4">
 //               <TabsTrigger value="sparkPools" className="gap-2">
 //                 <Database className="w-4 h-4" />
@@ -852,13 +867,13 @@
 //                   {pipelines.length}
 //                 </span>
 //               </TabsTrigger>
-//               {/* <TabsTrigger value="linkedServices" className="gap-2">
+//               <TabsTrigger value="linkedServices" className="gap-2">
 //                 <Link2 className="w-4 h-4" />
 //                 Linked Services
 //                 <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary/10 text-primary rounded">
 //                   {linkedServices.length}
 //                 </span>
-//               </TabsTrigger> */}
+//               </TabsTrigger>
 //             </TabsList>
 
 //             {/* Search & Filters */}
@@ -940,7 +955,7 @@
 //                       <TableHead>RUNTIME VER.</TableHead>
 //                       <TableHead>NODE TYPE</TableHead>
 //                       <TableHead>NODES</TableHead>
-//                       {/* <TableHead>LIBRARIES</TableHead> */}
+//                       <TableHead>LIBRARIES</TableHead>
 //                       <TableHead>STATUS</TableHead>
 //                     </TableRow>
 //                   </TableHeader>
@@ -952,7 +967,7 @@
 //                         </TableCell>
 //                       </TableRow>
 //                     ) : (
-//                       filteredSparkPools.map((pool) => (
+//                       paginateData(filteredSparkPools).map((pool) => (
 //                         <TableRow key={pool.id} className="hover:bg-muted/50">
 //                           <TableCell>
 //                             <Checkbox
@@ -971,7 +986,7 @@
 //                           <TableCell>{pool.runtimeVersion}</TableCell>
 //                           <TableCell>{pool.nodeType}</TableCell>
 //                           <TableCell>{pool.nodes}</TableCell>
-//                           {/* <TableCell className="text-primary">{pool.libraries}</TableCell> */}
+//                           <TableCell className="text-primary">{pool.libraries}</TableCell>
 //                           <TableCell>
 //                             <StatusBadge status={pool.status} />
 //                           </TableCell>
@@ -998,8 +1013,8 @@
 //                       </TableHead>
 //                       <TableHead>NOTEBOOK NAME</TableHead>
 //                       <TableHead>LANGUAGE</TableHead>
-//                       {/* <TableHead>LAST MODIFIED</TableHead>
-//                       <TableHead>DEPENDENCIES</TableHead> */}
+//                       <TableHead>LAST MODIFIED</TableHead>
+//                       <TableHead>DEPENDENCIES</TableHead>
 //                       <TableHead>STATUS</TableHead>
 //                     </TableRow>
 //                   </TableHeader>
@@ -1011,7 +1026,7 @@
 //                         </TableCell>
 //                       </TableRow>
 //                     ) : (
-//                       filteredNotebooks.map((notebook) => (
+//                       paginateData(filteredNotebooks).map((notebook) => (
 //                         <TableRow key={notebook.id} className="hover:bg-muted/50">
 //                           <TableCell>
 //                             <Checkbox
@@ -1028,8 +1043,8 @@
 //                             </div>
 //                           </TableCell>
 //                           <TableCell>{notebook.language}</TableCell>
-//                           {/* <TableCell>{notebook.lastModified}</TableCell>
-//                           <TableCell>{notebook.dependencies}</TableCell> */}
+//                           <TableCell>{notebook.lastModified}</TableCell>
+//                           <TableCell>{notebook.dependencies}</TableCell>
 //                           <TableCell>
 //                             <StatusBadge status={notebook.status} />
 //                           </TableCell>
@@ -1056,7 +1071,7 @@
 //                       </TableHead>
 //                       <TableHead>PIPELINE NAME</TableHead>
 //                       <TableHead>ACTIVITIES</TableHead>
-//                       {/* <TableHead>LAST RUN</TableHead> */}
+//                       <TableHead>LAST RUN</TableHead>
 //                       <TableHead>STATUS</TableHead>
 //                     </TableRow>
 //                   </TableHeader>
@@ -1068,7 +1083,7 @@
 //                         </TableCell>
 //                       </TableRow>
 //                     ) : (
-//                       filteredPipelines.map((pipeline) => (
+//                       paginateData(filteredPipelines).map((pipeline) => (
 //                         <TableRow key={pipeline.id} className="hover:bg-muted/50">
 //                           <TableCell>
 //                             <Checkbox
@@ -1085,7 +1100,7 @@
 //                             </div>
 //                           </TableCell>
 //                           <TableCell>{pipeline.activities}</TableCell>
-//                           {/* <TableCell>{pipeline.lastRun}</TableCell> */}
+//                           <TableCell>{pipeline.lastRun}</TableCell>
 //                           <TableCell>
 //                             <StatusBadge status={pipeline.status} />
 //                           </TableCell>
@@ -1097,7 +1112,7 @@
 //               </Card>
 //             </TabsContent>
 
-//             {/* <TabsContent value="linkedServices">
+//             <TabsContent value="linkedServices">
 //               <Card>
 //                 <Table>
 //                   <TableHeader>
@@ -1123,7 +1138,7 @@
 //                         </TableCell>
 //                       </TableRow>
 //                     ) : (
-//                       filteredLinkedServices.map((service) => (
+//                       paginateData(filteredLinkedServices).map((service) => (
 //                         <TableRow key={service.id} className="hover:bg-muted/50">
 //                           <TableCell>
 //                             <Checkbox
@@ -1149,18 +1164,63 @@
 //                   </TableBody>
 //                 </Table>
 //               </Card>
-//             </TabsContent> */}
+//             </TabsContent>
 //           </Tabs>
 
 //           {/* Pagination */}
 //           <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-//             <span>Rows per page: 10</span>
 //             <span>
-//               {activeTab === "sparkPools" && `1-${filteredSparkPools.length} of ${sparkPools.length}`}
-//               {activeTab === "notebooks" && `1-${filteredNotebooks.length} of ${notebooks.length}`}
-//               {activeTab === "pipelines" && `1-${filteredPipelines.length} of ${pipelines.length}`}
-//               {activeTab === "linkedServices" && `1-${filteredLinkedServices.length} of ${linkedServices.length}`}
+//               Showing {currentPage === 1 ? 1 : (currentPage - 1) * rowsPerPage + 1}-
+//               {Math.min(currentPage * rowsPerPage,
+//                 activeTab === "sparkPools" ? filteredSparkPools.length :
+//                   activeTab === "notebooks" ? filteredNotebooks.length :
+//                     activeTab === "pipelines" ? filteredPipelines.length :
+//                       filteredLinkedServices.length
+//               )} of {
+//                 activeTab === "sparkPools" ? filteredSparkPools.length :
+//                   activeTab === "notebooks" ? filteredNotebooks.length :
+//                     activeTab === "pipelines" ? filteredPipelines.length :
+//                       filteredLinkedServices.length
+//               } {activeTab === "sparkPools" ? "pools" :
+//                 activeTab === "notebooks" ? "notebooks" :
+//                   activeTab === "pipelines" ? "pipelines" : "services"}
 //             </span>
+
+//             <div className="flex items-center gap-3">
+//               <Button
+//                 variant="ghost"
+//                 size="icon"
+//                 className="h-8 w-8"
+//                 onClick={() => setCurrentPage(p => p - 1)}
+//                 disabled={currentPage === 1}
+//               >
+//                 <ChevronLeft className="w-4 h-4" />
+//               </Button>
+
+//               <span className="text-foreground">
+//                 Page {currentPage} of {Math.ceil((
+//                   activeTab === "sparkPools" ? filteredSparkPools.length :
+//                     activeTab === "notebooks" ? filteredNotebooks.length :
+//                       activeTab === "pipelines" ? filteredPipelines.length :
+//                         filteredLinkedServices.length
+//                 ) / rowsPerPage)}
+//               </span>
+
+//               <Button
+//                 variant="ghost"
+//                 size="icon"
+//                 className="h-8 w-8"
+//                 onClick={() => setCurrentPage(p => p + 1)}
+//                 disabled={currentPage * rowsPerPage >= (
+//                   activeTab === "sparkPools" ? filteredSparkPools.length :
+//                     activeTab === "notebooks" ? filteredNotebooks.length :
+//                       activeTab === "pipelines" ? filteredPipelines.length :
+//                         filteredLinkedServices.length
+//                 )}
+//               >
+//                 <ChevronRight className="w-4 h-4" />
+//               </Button>
+//             </div>
 //           </div>
 //         </main>
 
@@ -1231,8 +1291,8 @@
 
 
 
+//24/02
 
-//18/02
 import { useState } from "react";
 import { useAzureCredentials } from "@/contexts/AzureCredentialsContext";
 import { AppHeader } from "@/components/AppHeader";
@@ -1325,9 +1385,7 @@ interface MigrationWorkspaceProps {
 function formatErrorMessage(error: any): string | undefined {
   if (!error) return undefined;
 
-  // If error is a string, return it as-is
   if (typeof error === 'string') {
-    // Try to parse if it looks like JSON
     try {
       const parsed = JSON.parse(error);
       if (parsed.message) {
@@ -1338,12 +1396,10 @@ function formatErrorMessage(error: any): string | undefined {
     }
   }
 
-  // If error is an object with a message property, extract it
   if (typeof error === 'object' && error.message) {
     return error.message;
   }
 
-  // Fallback: stringify the error
   return JSON.stringify(error);
 }
 
@@ -1357,8 +1413,6 @@ export function MigrationWorkspace({
   const { credentials } = useAzureCredentials();
   const { credentials: fabricCredentials, setCredentials: setFabricCredentials } = useFabricCredentials();
 
-
-  // Transform API data
   const transformedData = transformApiResponse(apiResponse);
 
   const [activeTab, setActiveTab] = useState<TabType>("sparkPools");
@@ -1387,7 +1441,6 @@ export function MigrationWorkspace({
   };
   const [showFabricModal, setShowFabricModal] = useState(false);
 
-  // Simple pagination
   const paginateData = (data: any[]) => {
     const startIndex = (currentPage - 1) * rowsPerPage;
     return data.slice(startIndex, startIndex + rowsPerPage);
@@ -1398,7 +1451,6 @@ export function MigrationWorkspace({
     setCurrentPage(1);
   };
 
-  // Filter functions
   const filterBySearch = <T extends Record<string, any>>(items: T[]) => {
     if (!searchQuery) return items;
     const query = searchQuery.toLowerCase();
@@ -1443,7 +1495,6 @@ export function MigrationWorkspace({
   const filteredPipelines = applyFilters(pipelines, "pipelines");
   const filteredLinkedServices = applyFilters(linkedServices, "linkedServices");
 
-  // Get unique values for filters
   const getUniqueStatuses = () => {
     const allStatuses = new Set<string>();
     [...sparkPools, ...notebooks, ...pipelines, ...linkedServices]
@@ -1484,16 +1535,11 @@ export function MigrationWorkspace({
 
   const getPlaceholderText = () => {
     switch (activeTab) {
-      case "sparkPools":
-        return "Filter spark pools...";
-      case "notebooks":
-        return "Filter notebooks...";
-      case "pipelines":
-        return "Filter pipelines...";
-      case "linkedServices":
-        return "Filter linked services...";
-      default:
-        return "Search...";
+      case "sparkPools": return "Filter spark pools...";
+      case "notebooks": return "Filter notebooks...";
+      case "pipelines": return "Filter pipelines...";
+      case "linkedServices": return "Filter linked services...";
+      default: return "Search...";
     }
   };
 
@@ -1542,7 +1588,7 @@ export function MigrationWorkspace({
 
   const handleFabricConnect = (apiResponse: any) => {
     setShowFabricModal(false);
-    setShowReview(true); // Go to review screen after connecting
+    setShowReview(true);
   };
 
   const handleStartMigration = async (workspace: any) => {
@@ -1550,15 +1596,11 @@ export function MigrationWorkspace({
     setMigrationError(null);
 
     try {
-
       if (!fabricCredentials?.tenantId || !fabricCredentials?.clientId || !fabricCredentials?.clientSecret) {
         setMigrationError("Fabric credentials not found. Please connect to Fabric.");
         setIsMigrating(false);
         return;
       }
-
-      console.log("Starting migration with workspace:", workspace);
-      console.log("Using credentials:", credentials);
 
       const selectedDetails = getSelectedItemDetails();
 
@@ -1570,17 +1612,16 @@ export function MigrationWorkspace({
         status: "Running" as const,
         targetWorkspace: workspace.name,
         lastModified: new Date().toISOString(),
-        // Include other properties from the original item
         runtimeVersion: item.runtimeVersion,
         nodeType: item.nodeType,
         nodes: item.nodes,
         language: item.language,
         dependencies: item.dependencies,
-        activities: item.activities
+        activities: item.activities,
+        runId: undefined, // will be set after API responds
       }));
 
       // Step 2: Immediately navigate to report with "Running" status
-      console.log("Navigating to report with running items:", initialMigrationItems);
       onMigrationComplete(initialMigrationItems);
 
       // Step 3: Prepare base payload
@@ -1599,20 +1640,14 @@ export function MigrationWorkspace({
         }
       };
 
-      console.log("Base payload:", basePayload);
-
       // Step 4: Migrate Spark Pools (one at a time)
       const selectedPools = selectedDetails.filter(item => item.type === "SparkPool");
       for (const pool of selectedPools) {
-        console.log("Migrating Spark Pool:", pool.name);
-
         const sparkPoolPayload = {
           ...basePayload,
           selectedPools: [pool.name],
           migrateConfigs: true
         };
-
-        console.log("Spark Pool Migration Payload:", JSON.stringify(sparkPoolPayload, null, 2));
 
         try {
           const sparkResponse = await fetch(
@@ -1627,10 +1662,13 @@ export function MigrationWorkspace({
           const sparkResult = await sparkResponse.json();
           console.log("Spark Pool Migration Response:", sparkResult);
 
-          const isSuccess = sparkResult.Success?.includes(pool.name);
-          const failedItem = sparkResult.Failed?.find((f: any) => f.name === pool.name);
+          // Find item in Success or Failed arrays by name
+          const successItem = (sparkResult.Success || []).find((s: any) => s.name === pool.name);
+          const failedItem = (sparkResult.Failed || []).find((f: any) => f.name === pool.name);
 
-          // Update this specific item in the report
+          const isSuccess = !!successItem;
+          const runId = successItem?.run_id || failedItem?.run_id;
+
           onMigrationUpdate((prevItems) =>
             prevItems.map(item =>
               item.id === pool.id
@@ -1638,7 +1676,8 @@ export function MigrationWorkspace({
                   ...item,
                   status: isSuccess ? "Success" : "Failed",
                   errorMessage: formatErrorMessage(failedItem?.message),
-                  lastModified: new Date().toISOString()
+                  lastModified: new Date().toISOString(),
+                  runId: runId,
                 }
                 : item
             )
@@ -1652,7 +1691,7 @@ export function MigrationWorkspace({
                   ...item,
                   status: "Failed",
                   errorMessage: formatErrorMessage(error instanceof Error ? error.message : error),
-                  lastModified: new Date().toISOString()
+                  lastModified: new Date().toISOString(),
                 }
                 : item
             )
@@ -1663,14 +1702,10 @@ export function MigrationWorkspace({
       // Step 5: Migrate Notebooks (one at a time)
       const selectedNotebooks = selectedDetails.filter(item => item.type === "Notebook");
       for (const notebook of selectedNotebooks) {
-        console.log("Migrating Notebook:", notebook.name);
-
         const notebookPayload = {
           ...basePayload,
           notebooks: [notebook.name]
         };
-
-        console.log("Notebook Migration Payload:", JSON.stringify(notebookPayload, null, 2));
 
         try {
           const notebookResponse = await fetch(
@@ -1685,17 +1720,33 @@ export function MigrationWorkspace({
           const notebookResult = await notebookResponse.json();
           console.log("Notebook Migration Response:", notebookResult);
 
-          const isSuccess = notebookResult.Success?.includes(notebook.name);
-          const failedItem = notebookResult.Failed?.find((f: any) => f.name === notebook.name);
+          // NEW: parse run_id from Success/Failed arrays
+          const successItem = (notebookResult.Success || []).find((s: any) => s.name === notebook.name);
+          const failedItem = (notebookResult.Failed || []).find((f: any) => f.name === notebook.name);
+
+          // Also handle details array (notebook endpoint uses "details")
+          const detailItem = (notebookResult.details || []).find((d: any) => d.name === notebook.name);
+
+          const isSuccess = !!successItem || detailItem?.status === "created" || detailItem?.status === "replaced";
+          const isReplaced = detailItem?.status === "replaced";
+          const isSkipped = detailItem?.status === "already-exists";
+          const runId = successItem?.run_id || failedItem?.run_id || detailItem?.run_id;
+
+          let finalStatus: string;
+          if (isReplaced) finalStatus = "Replaced";
+          else if (isSkipped) finalStatus = "Skipped";
+          else if (isSuccess) finalStatus = "Success";
+          else finalStatus = "Failed";
 
           onMigrationUpdate((prevItems) =>
             prevItems.map(item =>
               item.id === notebook.id
                 ? {
                   ...item,
-                  status: isSuccess ? "Success" : "Failed",
+                  status: finalStatus,
                   errorMessage: formatErrorMessage(failedItem?.message),
-                  lastModified: new Date().toISOString()
+                  lastModified: new Date().toISOString(),
+                  runId: runId,
                 }
                 : item
             )
@@ -1709,7 +1760,7 @@ export function MigrationWorkspace({
                   ...item,
                   status: "Failed",
                   errorMessage: formatErrorMessage(error instanceof Error ? error.message : error),
-                  lastModified: new Date().toISOString()
+                  lastModified: new Date().toISOString(),
                 }
                 : item
             )
@@ -1720,14 +1771,10 @@ export function MigrationWorkspace({
       // Step 6: Migrate Pipelines (one at a time)
       const selectedPipelines = selectedDetails.filter(item => item.type === "Pipeline");
       for (const pipeline of selectedPipelines) {
-        console.log("Migrating Pipeline:", pipeline.name);
-
         const pipelinePayload = {
           ...basePayload,
           pipelines: [pipeline.name]
         };
-
-        console.log("Pipeline Migration Payload:", JSON.stringify(pipelinePayload, null, 2));
 
         try {
           const pipelineResponse = await fetch(
@@ -1742,8 +1789,12 @@ export function MigrationWorkspace({
           const pipelineResult = await pipelineResponse.json();
           console.log("Pipeline Migration Response:", pipelineResult);
 
-          const isSuccess = pipelineResult.Success?.includes(pipeline.name);
-          const failedItem = pipelineResult.Failed?.find((f: any) => f.name === pipeline.name);
+          // NEW: parse run_id from Success/Failed arrays
+          const successItem = (pipelineResult.Success || []).find((s: any) => s.name === pipeline.name);
+          const failedItem = (pipelineResult.Failed || []).find((f: any) => f.name === pipeline.name);
+
+          const isSuccess = !!successItem;
+          const runId = successItem?.run_id || failedItem?.run_id;
 
           onMigrationUpdate((prevItems) =>
             prevItems.map(item =>
@@ -1752,7 +1803,8 @@ export function MigrationWorkspace({
                   ...item,
                   status: isSuccess ? "Success" : "Failed",
                   errorMessage: formatErrorMessage(failedItem?.message),
-                  lastModified: new Date().toISOString()
+                  lastModified: new Date().toISOString(),
+                  runId: runId,
                 }
                 : item
             )
@@ -1766,7 +1818,7 @@ export function MigrationWorkspace({
                   ...item,
                   status: "Failed",
                   errorMessage: formatErrorMessage(error instanceof Error ? error.message : error),
-                  lastModified: new Date().toISOString()
+                  lastModified: new Date().toISOString(),
                 }
                 : item
             )
@@ -1777,7 +1829,6 @@ export function MigrationWorkspace({
       // Step 7: Handle Linked Services (not implemented)
       const selectedLinkedServices = selectedDetails.filter(item => item.type === "LinkedService");
       for (const service of selectedLinkedServices) {
-        console.log("Linked Services migration not yet implemented");
         onMigrationUpdate((prevItems) =>
           prevItems.map(item =>
             item.id === service.id
@@ -1785,14 +1836,13 @@ export function MigrationWorkspace({
                 ...item,
                 status: "Failed",
                 errorMessage: "Linked Services migration not yet implemented",
-                lastModified: new Date().toISOString()
+                lastModified: new Date().toISOString(),
               }
               : item
           )
         );
       }
 
-      console.log("=== ALL MIGRATIONS COMPLETED ===");
       setIsMigrating(false);
 
     } catch (error) {
@@ -2020,10 +2070,6 @@ export function MigrationWorkspace({
               </p>
             </div>
             <div className="flex gap-3">
-              {/* <Button variant="outline">
-                <FileText className="w-4 h-4" />
-                Export Report
-              </Button> */}
               <Button
                 variant="azure"
                 disabled={totalSelected === 0}
@@ -2101,13 +2147,13 @@ export function MigrationWorkspace({
                   {pipelines.length}
                 </span>
               </TabsTrigger>
-              <TabsTrigger value="linkedServices" className="gap-2">
+              {/* <TabsTrigger value="linkedServices" className="gap-2">
                 <Link2 className="w-4 h-4" />
                 Linked Services
                 <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary/10 text-primary rounded">
                   {linkedServices.length}
                 </span>
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
 
             {/* Search & Filters */}
@@ -2189,14 +2235,13 @@ export function MigrationWorkspace({
                       <TableHead>RUNTIME VER.</TableHead>
                       <TableHead>NODE TYPE</TableHead>
                       <TableHead>NODES</TableHead>
-                      <TableHead>LIBRARIES</TableHead>
                       <TableHead>STATUS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredSparkPools.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           No spark pools found matching your filters
                         </TableCell>
                       </TableRow>
@@ -2220,7 +2265,6 @@ export function MigrationWorkspace({
                           <TableCell>{pool.runtimeVersion}</TableCell>
                           <TableCell>{pool.nodeType}</TableCell>
                           <TableCell>{pool.nodes}</TableCell>
-                          <TableCell className="text-primary">{pool.libraries}</TableCell>
                           <TableCell>
                             <StatusBadge status={pool.status} />
                           </TableCell>
@@ -2247,15 +2291,13 @@ export function MigrationWorkspace({
                       </TableHead>
                       <TableHead>NOTEBOOK NAME</TableHead>
                       <TableHead>LANGUAGE</TableHead>
-                      <TableHead>LAST MODIFIED</TableHead>
-                      <TableHead>DEPENDENCIES</TableHead>
                       <TableHead>STATUS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredNotebooks.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                           No notebooks found matching your filters
                         </TableCell>
                       </TableRow>
@@ -2277,8 +2319,6 @@ export function MigrationWorkspace({
                             </div>
                           </TableCell>
                           <TableCell>{notebook.language}</TableCell>
-                          <TableCell>{notebook.lastModified}</TableCell>
-                          <TableCell>{notebook.dependencies}</TableCell>
                           <TableCell>
                             <StatusBadge status={notebook.status} />
                           </TableCell>
@@ -2305,14 +2345,13 @@ export function MigrationWorkspace({
                       </TableHead>
                       <TableHead>PIPELINE NAME</TableHead>
                       <TableHead>ACTIVITIES</TableHead>
-                      <TableHead>LAST RUN</TableHead>
                       <TableHead>STATUS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredPipelines.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                           No pipelines found matching your filters
                         </TableCell>
                       </TableRow>
@@ -2334,7 +2373,6 @@ export function MigrationWorkspace({
                             </div>
                           </TableCell>
                           <TableCell>{pipeline.activities}</TableCell>
-                          <TableCell>{pipeline.lastRun}</TableCell>
                           <TableCell>
                             <StatusBadge status={pipeline.status} />
                           </TableCell>
@@ -2472,7 +2510,6 @@ export function MigrationWorkspace({
   );
 }
 
-// Helper function to transform API response to component format
 function transformApiResponse(apiResponse: any) {
   const sparkPools: SparkPool[] = (apiResponse.sparkPools || []).map((pool: any, index: number) => ({
     id: pool.id || `pool-${index}`,
@@ -2501,7 +2538,7 @@ function transformApiResponse(apiResponse: any) {
     name: pipeline.name || `Unnamed Pipeline ${index + 1}`,
     activities: pipeline.properties?.activities?.length || 0,
     lastRun: 'N/A',
-    status: 'Success',
+    status: 'Ready',
   }));
 
   const linkedServices: LinkedService[] = (apiResponse.linkedServices || []).map((service: any, index: number) => ({

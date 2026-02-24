@@ -827,7 +827,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ReplaceNotebooksDialog } from "@/components/modals/ReplaceNotebookDialog";
 import { useFabricCredentials } from "@/contexts/FabricCredentialsContext";
 import { useDatabricksCredentials } from "@/contexts/DatabricksCredentialsContext";
-import { LogsViewerDialog } from "@/components/modals/LogsViewerDialog";
+import { LogsViewerDialog } from "@/components/modals/DatabricksLogsViewerDialog";
 import { FileText } from "lucide-react";
  
 interface DatabricksMigrationItem {

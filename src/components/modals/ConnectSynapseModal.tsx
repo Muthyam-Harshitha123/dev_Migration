@@ -555,7 +555,7 @@ export function ConnectSynapseModal({ open, onClose, onConnect }: ConnectSynapse
                 </div>
               </div>
  
-              <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
+              {/* <div className="flex items-start space-x-3 p-3 rounded-lg bg-muted/50">
                 <Checkbox
                   id="linkedServices"
                   checked={formData.discoveryScope.linkedServices}
@@ -569,7 +569,7 @@ export function ConnectSynapseModal({ open, onClose, onConnect }: ConnectSynapse
                     Scan connection definitions
                   </p>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
