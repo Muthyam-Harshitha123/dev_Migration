@@ -832,7 +832,7 @@ export function SelectTargetModal({ open, onClose, onConfirm }: SelectTargetModa
 
       try {
         const response = await fetch(
-          `https://48.217.233.235/ListFabricWorkspaces`,
+          `https://20.127.242.199/ListFabricWorkspaces`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

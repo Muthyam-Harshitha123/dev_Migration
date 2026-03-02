@@ -51,7 +51,7 @@ export function LogsViewerDialog({
         try {
             console.log(`🔍 Fetching logs for runId: ${runId}`);
  
-            const url = `https://synapsetofabricfunc-fmg2d2ejctg2eacu.eastus-01.azurewebsites.net/api/Getlogs`;
+            const url = `https://20.127.242.199/Getlogs`;
  
             console.log("📡 Fetching from URL:", url);
  

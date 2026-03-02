@@ -1469,7 +1469,7 @@ export function MigrationWorkspace({
     console.log("📤 Synapse Notebook migration payload:", payload);
 
     try {
-      const response = await fetch("https://48.217.233.235/SynapseNotebooksMigration", {
+      const response = await fetch("https://20.127.242.199/SynapseNotebooksMigration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1541,7 +1541,7 @@ export function MigrationWorkspace({
   // =========================================================
   const migrateSparkPool = async (workspace: any, pool: any) => {
     try {
-      const res    = await fetch("https://48.217.233.235/SynapseSparkPoolMigration", {
+      const res    = await fetch("https://20.127.242.199/SynapseSparkPoolMigration", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...buildBasePayload(workspace.id), selectedPools: [pool.name], migrateConfigs: true }),
       });
@@ -1571,7 +1571,7 @@ export function MigrationWorkspace({
   // =========================================================
   const migratePipeline = async (workspace: any, pipeline: any) => {
     try {
-      const res    = await fetch("https://48.217.233.235/SynapsePipelinesMigration", {
+      const res    = await fetch("https://20.127.242.199/SynapsePipelinesMigration", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...buildBasePayload(workspace.id), pipelines: [pipeline.name] }),
       });
@@ -1673,6 +1673,10 @@ export function MigrationWorkspace({
   // =========================================================
   if (showReview) {
     const selectedDetails = getSelectedItemDetails();
+    function setShowDataMigration(arg0: boolean): void {
+      throw new Error("Function not implemented.");
+    }
+
     return (
       <div className="min-h-screen bg-background">
         <main className="p-6 max-w-4xl mx-auto animate-fade-in">
@@ -1744,6 +1748,16 @@ export function MigrationWorkspace({
 
               <div className="flex justify-between pt-4 border-t">
                 <Button variant="outline" onClick={() => setShowReview(false)}>Back to Selection</Button>
+                 <div className="flex gap-3">
+                {/* New Data Migration Button */}
+                <Button
+                  variant="azure"
+                  onClick={() => setShowDataMigration(true)} // adjust handler as needed
+                  disabled={isMigrating}
+                >
+                  Data Migration
+                </Button>
+    </div>
                 <Button variant="azure" onClick={() => setShowTargetModal(true)} disabled={totalSelected === 0 || isMigrating}>
                   {isMigrating ? <><Loader2 className="w-4 h-4 animate-spin" /> Migrating...</> : <>Migrate <ArrowRight className="w-4 h-4" /></>}
                 </Button>

@@ -1634,7 +1634,7 @@ export function DatabricksMigrationWorkspace({
 
     try {
       const response = await fetch(
-        "https://48.217.233.235/MigrateNotebooks",
+        "https://20.127.242.199/DbMigrateNotebooks",
         {
           method: "POST",
           headers: {
@@ -1865,7 +1865,7 @@ const migrateJobs = async (workspace: any, jobs: any[]) => {
   try {
     // Step 1: Start the durable orchestration
     const startResponse = await fetch(
-      "https://databrickstofabric-fuhdb8a7dhbebrf5.eastus-01.azurewebsites.net/api/MigrateJobsHttpStarter",
+      "https://20.127.242.199/MigrateJobsHttpStarter",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1996,7 +1996,7 @@ const migrateClusters = async (workspace: any, clusters: any[], capacityId: stri
 
     try {
       const response = await fetch(
-        "https://48.217.233.235/ClusterMigration",
+        "https://20.127.242.199/DbClusterMigration",
         {
           method: "POST",
           headers: {

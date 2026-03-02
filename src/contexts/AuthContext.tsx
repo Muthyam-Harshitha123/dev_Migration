@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  
 const AUTH_LOGIN_URL =
 
-  "https://synapsetofabricfunc-fmg2d2ejctg2eacu.eastus-01.azurewebsites.net/api/auth-login";
+  "https://devqfabricforge.azurewebsites.net/api/auth_login?code=z_EBjLFyiurPXQ0Lg2DrSPYLpyrKOfvz7Ww_sY_bJgISAzFuiI9tdQ==";
  
 export function AuthProvider({ children }: { children: ReactNode }) {
 

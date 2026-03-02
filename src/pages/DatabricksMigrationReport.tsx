@@ -1054,7 +1054,7 @@ export function DatabricksMigrationReport({
             console.log("📤 Sending replacement request...");
  
             const response = await fetch(
-                "https://48.217.233.235/MigrateNotebooks",
+                "https://20.127.242.199/DbMigrateNotebooks",
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

@@ -1038,7 +1038,7 @@ export function MigrationReport({
 
       console.log("📤 Synapse replace notebooks payload:", payload);
 
-      const response = await fetch("https://48.217.233.235/SynapseNotebooksMigration", {
+      const response = await fetch("https://20.127.242.199/SynapseNotebooksMigration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
