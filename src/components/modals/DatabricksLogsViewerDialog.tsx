@@ -450,7 +450,7 @@ export function LogsViewerDialog({
         try {
             console.log(`🔍 Fetching logs for runId: ${runId}`);
  
-            const url = `https://20.127.242.199/Getlogs`;
+            const url = `https://20.106.196.248/Getlogs`;
  
             console.log("📡 Fetching from URL:", url);
  

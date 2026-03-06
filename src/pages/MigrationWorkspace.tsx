@@ -1469,7 +1469,7 @@ export function MigrationWorkspace({
     console.log("📤 Synapse Notebook migration payload:", payload);
 
     try {
-      const response = await fetch("https://20.127.242.199/SynapseNotebooksMigration", {
+      const response = await fetch("https://20.106.196.248/SynapseNotebooksMigration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1541,7 +1541,7 @@ export function MigrationWorkspace({
   // =========================================================
   const migrateSparkPool = async (workspace: any, pool: any) => {
     try {
-      const res    = await fetch("https://20.127.242.199/SynapseSparkPoolMigration", {
+      const res    = await fetch("https://20.106.196.248/SynapseSparkPoolMigration", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...buildBasePayload(workspace.id), selectedPools: [pool.name], migrateConfigs: true }),
       });
@@ -1571,7 +1571,7 @@ export function MigrationWorkspace({
   // =========================================================
   const migratePipeline = async (workspace: any, pipeline: any) => {
     try {
-      const res    = await fetch("https://20.127.242.199/SynapsePipelinesMigration", {
+      const res    = await fetch("https://20.106.196.248/SynapsePipelinesMigration", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...buildBasePayload(workspace.id), pipelines: [pipeline.name] }),
       });

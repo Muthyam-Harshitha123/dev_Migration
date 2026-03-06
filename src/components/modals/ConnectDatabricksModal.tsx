@@ -473,7 +473,7 @@ export function ConnectDatabricksModal({
     try {
       console.log("Making discovery API call...");
       const response = await fetch(
-        "https://20.127.242.199/ConnecttoDatabricks",
+        "https://20.106.196.248/ConnecttoDatabricks",
         {
           method: "POST",
           headers: {

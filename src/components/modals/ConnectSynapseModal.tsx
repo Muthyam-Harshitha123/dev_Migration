@@ -371,7 +371,7 @@ export function ConnectSynapseModal({ open, onClose, onConnect }: ConnectSynapse
       console.log("Sending payload:", JSON.stringify(payload, null, 2));
  
       const response = await fetch(
-        `https://20.127.242.199/ConnecttoSynapseWs`,
+        `https://20.106.196.248/ConnecttoSynapseWs`,
         {  
           method: "POST",
           headers: {

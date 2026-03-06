@@ -832,7 +832,7 @@ export function SelectTargetModal({ open, onClose, onConfirm }: SelectTargetModa
 
       try {
         const response = await fetch(
-          `https://20.127.242.199/ListFabricWorkspaces`,
+          `https://20.106.196.248/ListFabricWorkspaces`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -894,7 +894,7 @@ export function SelectTargetModal({ open, onClose, onConfirm }: SelectTargetModa
 
     try {
       const response = await fetch(
-        `https://48.217.233.235/ListFabricWorkspaces`,
+        `https://20.106.196.248/ListFabricWorkspaces`,
         {
           method: "POST",
           headers: {
@@ -954,7 +954,7 @@ export function SelectTargetModal({ open, onClose, onConfirm }: SelectTargetModa
     setFetchingCapacities(true);
     try {
       const response = await fetch(
-        `https://48.217.233.235/ListCapacities`,
+        `https://20.106.196.248/ListCapacities`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1009,7 +1009,7 @@ export function SelectTargetModal({ open, onClose, onConfirm }: SelectTargetModa
 
     // Proceed with creation - let the backend handle duplicate detection
     const response = await fetch(
-      `https://48.217.233.235/CreateFabricWorkspace`,
+      `https://20.106.196.248/CreateFabricWorkspace`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -256,7 +256,7 @@ export function ConnectFabricModal({
       };
  
       const response = await fetch(
-        `https://20.127.242.199/connecttofabric`,
+        `https://20.106.196.248/connecttofabric`,
         {
           method: "POST",
           headers: {

@@ -1634,7 +1634,7 @@ export function DatabricksMigrationWorkspace({
 
     try {
       const response = await fetch(
-        "https://20.127.242.199/DbMigrateNotebooks",
+        "https://20.106.196.248/DbMigrateNotebooks",
         {
           method: "POST",
           headers: {
@@ -1865,7 +1865,7 @@ const migrateJobs = async (workspace: any, jobs: any[]) => {
   try {
     // Step 1: Start the durable orchestration
     const startResponse = await fetch(
-      "https://20.127.242.199/MigrateJobsHttpStarter",
+      "https://20.106.196.248/MigrateJobsHttpStarter",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1996,7 +1996,7 @@ const migrateClusters = async (workspace: any, clusters: any[], capacityId: stri
 
     try {
       const response = await fetch(
-        "https://20.127.242.199/DbClusterMigration",
+        "https://20.106.196.248/DbClusterMigration",
         {
           method: "POST",
           headers: {
