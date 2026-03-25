@@ -1,112 +1,31 @@
-// import { useState } from "react";
-// import { useMsal } from "@azure/msal-react";
-// import { Toaster } from "@/components/ui/toaster";
-// import { Toaster as Sonner } from "@/components/ui/sonner";
-// import { TooltipProvider } from "@/components/ui/tooltip";
-// import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-// import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
-// import Index from "./pages/Index";
-// import NotFound from "./pages/NotFound";
-// import { LoginPage } from "@/pages/LoginPage";
-// import { AuthGate } from "../src/auth/AuthGate";
-// import { AppHeader } from "@/components/AppHeader";
-// import { UserProfileModal } from "@/components/modals/UserProfileModal";
-// import { getMsalUser } from "@/auth/msalUser";
-
-// const queryClient = new QueryClient();
-
-// const App = () => {
-//   const { accounts, inProgress, instance } = useMsal();
-//   const isAuthenticated = accounts.length > 0;
-//   const [showProfile, setShowProfile] = useState(false);
-
-//   const user = isAuthenticated ? getMsalUser(instance) : null;
-
-//   // Wait for MSAL to finish loading before checking auth
-//   if (inProgress !== "none") {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center">
-//         <p>Loading...</p>
-//       </div>
-//     );
-//   }
-
-//   const handleLogout = () => {
-//     instance.logoutRedirect();
-//   };
-
-//   return (
-//     <QueryClientProvider client={queryClient}>
-//       <TooltipProvider>
-//         <Toaster />
-//         <Sonner />
-//         <AuthGate>
-//           <BrowserRouter>
-//             {isAuthenticated && (
-//               <>
-//                 <AppHeader 
-//                   userName={user?.name || user?.firstName || "User"}
-//                   onLogout={handleLogout}
-//                   onProfileClick={() => setShowProfile(true)}
-//                 />
-//                 <UserProfileModal 
-//                   open={showProfile}
-//                   onOpenChange={setShowProfile}
-//                   user={user}
-//                 />
-//               </>
-//             )}
-//             <Routes>
-//               <Route
-//                 path="/login"
-//                 element={
-//                   isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
-//                 }
-//               />
-
-//               <Route
-//                 path="/"
-//                 element={
-//                   isAuthenticated ? <Index /> : <Navigate to="/login" replace />
-//                 }
-//               />
-
-//               <Route path="*" element={<NotFound />} />
-//             </Routes>
-//           </BrowserRouter>
-//         </AuthGate>
-//       </TooltipProvider>
-//     </QueryClientProvider>
-//   );
-// };
-
-// export default App;
 
 
+
+
+
+//10feb
 // import { useState } from "react";
 // import { Toaster } from "@/components/ui/toaster";
 // import { Toaster as Sonner } from "@/components/ui/sonner";
 // import { TooltipProvider } from "@/components/ui/tooltip";
 // import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
+ 
 // import Index from "./pages/Index";
 // import NotFound from "./pages/NotFound";
 // import { LoginPage } from "./pages/LoginPage";
 // import { AuthProvider, useAuth } from "./contexts/AuthContext";
 // import { AppHeader } from "@/components/AppHeader";
 // import { UserProfileModal } from "@/components/modals/UserProfileModal";
-// import { FabricJobsHome } from "./pages/FabricJobsHome"; // Import your component
-
+ 
 // const queryClient = new QueryClient();
-
+ 
 // function AppRoutes() {
 //   const { user, isAuthenticated, isLoading, logout } = useAuth();
 //   const [showProfile, setShowProfile] = useState(false);
-
+ 
 //   console.log('[AppRoutes] Rendering with auth state:', { isAuthenticated, isLoading, user });
-
+ 
 //   // Wait for auth to finish loading before checking auth
 //   if (isLoading) {
 //     console.log('[AppRoutes] Still loading, showing loading screen');
@@ -116,17 +35,17 @@
 //       </div>
 //     );
 //   }
-
+ 
 //   const handleLogout = () => {
 //     console.log('[AppRoutes] Logout triggered');
 //     logout();
 //   };
-
+ 
 //   return (
 //     <BrowserRouter>
 //       {isAuthenticated && (
 //         <>
-//           <AppHeader 
+//           <AppHeader
 //             userName={user?.name || "User"}
 //             onLogout={handleLogout}
 //             onProfileClick={() => {
@@ -135,7 +54,7 @@
 //             }}
 //           />
 //           {showProfile && (
-//             <UserProfileModal 
+//             <UserProfileModal
 //               open={showProfile}
 //               onOpenChange={setShowProfile}
 //               user={user}
@@ -160,15 +79,42 @@
 //             )
 //           }
 //         />
-
+ 
 //         <Route
 //           path="/fabricjobshome"
 //           element={
 //             isAuthenticated ? <Index /> : <Navigate to="/login" replace />
 //           }
 //         />
-
-
+ 
+//         <Route
+//           path="/synapse-workspace"
+//           element={
+//             isAuthenticated ? <Index /> : <Navigate to="/login" replace />
+//           }
+//         />
+ 
+//         <Route
+//           path="/databricks-workspace"
+//           element={
+//             isAuthenticated ? <Index /> : <Navigate to="/login" replace />
+//           }
+//         />
+ 
+//         <Route
+//           path="/synapse-report"
+//           element={
+//             isAuthenticated ? <Index /> : <Navigate to="/login" replace />
+//           }
+//         />
+ 
+//         <Route
+//           path="/databricks-report"
+//           element={
+//             isAuthenticated ? <Index /> : <Navigate to="/login" replace />
+//           }
+//         />
+ 
 //         <Route
 //           path="/"
 //           element={
@@ -185,7 +131,7 @@
 //             )
 //           }
 //         />
-
+ 
 //         {/* Keep your Index route if needed */}
 //         <Route
 //           path="/index"
@@ -203,16 +149,16 @@
 //             )
 //           }
 //         />
-
+ 
 //         <Route path="*" element={<NotFound />} />
 //       </Routes>
 //     </BrowserRouter>
 //   );
 // }
-
+ 
 // const App = () => {
 //   console.log('[App] Initializing application');
-
+ 
 //   return (
 //     <QueryClientProvider client={queryClient}>
 //       <TooltipProvider>
@@ -225,12 +171,12 @@
 //     </QueryClientProvider>
 //   );
 // };
-
+ 
 // export default App;
 
 
 
-//10feb
+//17/02
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -244,6 +190,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AppHeader } from "@/components/AppHeader";
 import { UserProfileModal } from "@/components/modals/UserProfileModal";
+import companyLogo from '../public/Quadrant_logo.png'
  
 const queryClient = new QueryClient();
  
@@ -379,6 +326,13 @@ function AppRoutes() {
  
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <div className="fixed bottom-4 right-4 z-50">
+        <img
+          src={companyLogo}
+          alt="Company Logo"
+          className="h-5 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
+        />
+      </div>
     </BrowserRouter>
   );
 }
@@ -400,3 +354,4 @@ const App = () => {
 };
  
 export default App;
+ 

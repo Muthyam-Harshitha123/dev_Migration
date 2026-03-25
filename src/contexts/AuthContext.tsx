@@ -26,7 +26,7 @@ interface AuthContextType {
  
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
  
-const AUTH_LOGIN_URL =
+const AUTH_LOGIN_URL = 
 
   "https://devqfabricforge.azurewebsites.net/api/auth_login?code=z_EBjLFyiurPXQ0Lg2DrSPYLpyrKOfvz7Ww_sY_bJgISAzFuiI9tdQ==";
  
